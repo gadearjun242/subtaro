@@ -1,0 +1,50 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 64 64"
+>
+  <defs>
+    <linearGradient
+      id="g"
+      x1="4"
+      y1="4"
+      x2="60"
+      y2="60"
+      gradientUnits="userSpaceOnUse"
+    >
+      <stop offset="0" stop-color="#F0008C"/>
+      <stop offset="0.35" stop-color="#C000E8"/>
+      <stop offset="0.62" stop-color="#6233F5"/>
+      <stop offset="0.82" stop-color="#2672F4"/>
+      <stop offset="1" stop-color="#08B7E8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect
+    x="2"
+    y="2"
+    width="60"
+    height="60"
+    rx="17"
+    fill="url(#g)"
+  />
+
+  <!-- Caption window -->
+  <rect
+    x="15"
+    y="16"
+    width="34"
+    height="32"
+    rx="7"
+    fill="white"
+    fill-opacity=".08"
+    stroke="white"
+    stroke-width="2.8"
+  />
+
+  <!-- Subtitle marks -->
+  <rect x="20" y="24" width="11" height="4" rx="2" fill="white"/>
+  <rect x="34" y="24" width="10" height="4" rx="2" fill="white"/>
+  <rect x="20" y="32" width="8"  height="4" rx="2" fill="white"/>
+  <rect x="31" y="32" width="13" height="4" rx="2" fill="white"/>
+</svg>

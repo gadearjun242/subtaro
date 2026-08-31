@@ -1,0 +1,16 @@
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { useAuth } from '@/context/AuthContext'
+import FullScreenLoader from '@/components/common/FullScreenLoader'
+
+export default function ProtectedRoute() {
+  const { isAuthenticated, isLoading } = useAuth()
+  const location = useLocation()
+
+  if (isLoading) return <FullScreenLoader label="Checking your session…" />
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />
+  }
+
+  return <Outlet />
+}
