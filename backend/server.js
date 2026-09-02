@@ -114,7 +114,12 @@ app.set("trust proxy", 1);
 
 app.use(
   helmet({
-    contentSecurityPolicy: NODE_ENV === "production",
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        mediaSrc: ["'self'", "https://res.cloudinary.com"],
+      },
+    },
   }),
 );
 
