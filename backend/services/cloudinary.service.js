@@ -22,6 +22,7 @@ const uploadFile = async (filePath, options = {}) => {
     folder = "subtitle-app",
     resourceType = "auto",
     publicId,
+    overwrite,
   } = options;
 
   try {
@@ -29,6 +30,12 @@ const uploadFile = async (filePath, options = {}) => {
       resource_type: resourceType,
       folder,
       ...(publicId ? { public_id: publicId } : {}),
+      // Only meaningful (and only sent) when a fixed publicId is
+      // also given - overwriting an auto-generated publicId makes
+      // no sense since nothing else could already be there.
+      ...(publicId && overwrite !== undefined
+        ? { overwrite, invalidate: overwrite }
+        : {}),
     });
 
     return {

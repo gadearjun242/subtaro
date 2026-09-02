@@ -7,8 +7,8 @@ const OPTIONS = [
     icon: ListVideo,
     title: 'Selectable subtitle track',
     description:
-      'Subtitles are muxed into an .mkv as a toggleable track — like DVD/MKV subtitles, viewers can turn them on or off in a capable player (VLC, mpv, smart TVs). Fast, no re-encoding.',
-    note: "Browsers can't preview .mkv directly — in-page playback uses your original video with a native caption toggle instead.",
+      'Subtitles are added as a toggleable text track in the .mp4 itself — viewers can turn them on or off. Fast, no re-encoding, and it stays a single, directly playable video file.',
+    note: 'A native caption toggle is shown in-page; for the most reliable toggle everywhere, open the downloaded file in VLC, mpv, or a similar player.',
   },
   {
     value: 'embedded',

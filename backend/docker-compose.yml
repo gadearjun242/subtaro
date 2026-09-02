@@ -1,0 +1,87 @@
+name: subtaro-backend
+
+services:
+  # ------------------------------------------------------------
+  # API server (also runs the render worker in-process by
+  # default — see ENABLE_RENDER_WORKER below and BACKEND.md for
+  # splitting it into its own service once you need to scale
+  # render capacity independently of API capacity).
+  # ------------------------------------------------------------
+  app:
+    build: .
+    image: subtaro-backend:latest
+    restart: unless-stopped
+    ports:
+      - "${PORT:-5000}:5000"
+    env_file:
+      - .env
+    environment:
+      # Overrides .env's REDIS_URL (which is meant for running
+      # the app directly on the host) to point at the `redis`
+      # service below by its Compose network hostname.
+      REDIS_URL: redis://redis:6379
+      # MONGODB_URI is expected to come from .env, pointing at
+      # your MongoDB Atlas cluster — no local Mongo container.
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      # Named volume for transient render temp files (source
+      # downloads, FFmpeg output before upload) — keeps them off
+      # the container's writable layer without persisting them
+      # anywhere meaningful; safe to lose on recreate.
+      - render-tmp:/tmp
+
+  # ------------------------------------------------------------
+  # Redis — backs the BullMQ render queue only, not used as a
+  # general cache. A named volume persists queued/in-flight job
+  # state across container restarts (the whole point of the
+  # queue: a restart mid-render no longer loses the job).
+  # ------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+  # ------------------------------------------------------------
+  # OPTIONAL: a dedicated worker service, separate from `app`.
+  # Disabled by default (see the `profiles` key — Compose won't
+  # start it unless you explicitly ask for the "scaled" profile).
+  #
+  # If you do enable this, also set ENABLE_RENDER_WORKER=false in
+  # .env so `app` doesn't ALSO process render jobs in-process,
+  # and read the Socket.IO caveat in BACKEND.md before running
+  # more than one `app` replica alongside this.
+  # ------------------------------------------------------------
+  worker:
+    build: .
+    image: subtaro-backend:latest
+    restart: unless-stopped
+    profiles: ["scaled"]
+    command: ["node", "worker.js"]
+    env_file:
+      - .env
+    environment:
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - render-tmp:/tmp
+
+volumes:
+  redis-data:
+  render-tmp:
+
+
+# docker compose up --build
+
+# to delete
+# docker compose down --rmi all

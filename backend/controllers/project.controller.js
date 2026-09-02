@@ -39,6 +39,14 @@ const {
 } = require("../services/subtitleStyle.presets");
 
 const {
+  renderQueue,
+} = require("../queues/render.queue");
+
+const {
+  notifyProjectOutcome,
+} = require("../services/notification.service");
+
+const {
   emitProjectEvent,
 } = require("../services/socket.service");
 
@@ -1222,9 +1230,14 @@ const resumeProjectController =
 // ============================================================
 //
 // Mirrors the VIDEO PROJECT branch of finalizeProject() in
-// webhook.controller.js: download source video -> burn in the
-// (edited) subtitle with FFmpeg -> upload -> only then delete
-// the previous output file. Runs fire-and-forget after the
+// webhook.controller.js: download the ORIGINAL source video
+// (project.input.url - never the previous output, so edits are
+// never cumulative/re-rendered-on-top-of-themselves) -> burn in
+// or mux the (edited) subtitle with FFmpeg -> upload to the
+// project's one fixed output slot ("final_subtitled_video",
+// overwrite: true - same publicId finalizeProject() uses, so
+// re-rendering N times still only ever produces ONE stored
+// output file, never N). Runs fire-and-forget after the
 // subtitle PATCH response has already been sent, and reports
 // progress/completion/failure over the same project socket
 // events the rest of the pipeline uses.
@@ -1242,7 +1255,9 @@ const regenerateOutputVideo = async ({ projectMongoId, subtitleContent }) => {
   const previousOutputFile = project.output?.file || null;
 
   const subtitleMode = project.subtitleMode === "selectable" ? "selectable" : "embedded";
-  const outputExtension = subtitleMode === "selectable" ? "mkv" : "mp4";
+  // Both modes output .mp4 - see muxSelectableSubtitles() in
+  // media.service.js for why a separate .mkv is no longer needed.
+  const outputExtension = "mp4";
 
   const tempDir = await createTempDirectory(`subtitle-edit-${projectId}`);
   const subtitlePath = path.join(tempDir, "edited.srt");
@@ -1262,8 +1277,10 @@ const regenerateOutputVideo = async ({ projectMongoId, subtitleContent }) => {
       maxBytes: MAX_SOURCE_BYTES,
     });
 
-    if (subtitleMode === "selectable") {
-      await muxSelectableSubtitles({
+    let muxResult = null;
+
+  if (subtitleMode === "selectable") {
+      muxResult = await muxSelectableSubtitles({
         inputVideoPath: sourceMediaPath,
         subtitlePath,
         outputVideoPath: finalVideoPath,
@@ -1278,25 +1295,38 @@ const regenerateOutputVideo = async ({ projectMongoId, subtitleContent }) => {
     }
 
     // --------------------------------------------------------
-    // Upload the NEW output video first.
+    // Upload to the SAME fixed publicId as the original pipeline
+    // uses (services/media.service.js's finalizeProject),
+    // "overwrite: true" - Cloudinary replaces the file in place
+    // server-side. This is deliberately NOT an upload-a-new-file-
+    // then-delete-the-old-one flow: with a fixed slot there is
+    // never a window where two output videos exist for the same
+    // project, so there's nothing to "double up" and nothing that
+    // can be left orphaned if a delete step were to fail.
     // --------------------------------------------------------
+
+    const OUTPUT_PUBLIC_ID = "final_subtitled_video";
 
     const uploaded = await uploadToCloudinary(finalVideoPath, {
       folder: `subtitle-app/users/${userId}/projects/${projectId}/output`,
       resourceType: "video",
+      publicId: OUTPUT_PUBLIC_ID,
+      overwrite: true,
     });
 
-    // --------------------------------------------------------
-    // Only delete the PREVIOUS output video once the new one
-    // is safely uploaded.
-    // --------------------------------------------------------
-
-    if (previousOutputFile?.publicId) {
+    // Safety net only: a project's output could still be sitting
+    // at an old, differently-named publicId if it was rendered
+    // before this fixed-slot scheme existed. In that case (and
+    // only that case) there's a real leftover file to clean up.
+    if (
+      previousOutputFile?.publicId &&
+      previousOutputFile.publicId !== uploaded.publicId
+    ) {
       try {
         await deleteFromCloudinary(previousOutputFile.publicId, "video");
       } catch (cleanupError) {
         console.error(
-          `Failed to delete previous output video for ${projectId}:`,
+          `Failed to delete legacy output video for ${projectId}:`,
           cleanupError.message
         );
       }
@@ -1326,13 +1356,22 @@ const regenerateOutputVideo = async ({ projectMongoId, subtitleContent }) => {
       level: "info",
       message:
         subtitleMode === "selectable"
-          ? "Video re-muxed with a selectable subtitle track for the edited subtitle"
+          ? muxResult?.transcoded
+            ? `Video re-muxed with a selectable subtitle track (source codec ${muxResult.sourceVideoCodec || "unknown"} needed a re-encode for compatibility)`
+            : "Video re-muxed with a selectable subtitle track for the edited subtitle"
           : "Final video re-rendered with the edited subtitle",
       stepNumber: 5,
       stepName: "original_subtitle_generation",
       metadata: {
         event: "output_regenerated",
         previousPublicId: previousOutputFile?.publicId || null,
+        ...(muxResult
+          ? {
+              transcoded: muxResult.transcoded,
+              sourceVideoCodec: muxResult.sourceVideoCodec,
+              sourceAudioCodec: muxResult.sourceAudioCodec,
+            }
+          : {}),
       },
     });
 
@@ -1346,6 +1385,18 @@ const regenerateOutputVideo = async ({ projectMongoId, subtitleContent }) => {
       stepNumber: 5,
       message: "Video updated with your edited subtitles",
       data: { output: fresh.output },
+    });
+
+    // Presence-aware, same as the original pipeline's completion
+    // notification (see services/notification.service.js) - was
+    // previously missing here entirely, so a user who edited a
+    // subtitle and closed the tab never heard back once a
+    // (potentially slow, for "embedded" mode) re-render finished.
+    notifyProjectOutcome(fresh, "completed").catch((error) => {
+      console.error(
+        `[NOTIFY] Completion email failed for ${projectId}:`,
+        error.message
+      );
     });
   } catch (error) {
     console.error(`Output regeneration failed for ${projectId}:`, error.message);
@@ -1374,6 +1425,13 @@ const regenerateOutputVideo = async ({ projectMongoId, subtitleContent }) => {
           status: fresh.status,
           stepNumber: 5,
           message: `Video re-render failed: ${error.message}`,
+        });
+
+        notifyProjectOutcome(fresh, "failed").catch((notifyError) => {
+          console.error(
+            `[NOTIFY] Failure email failed for ${projectId}:`,
+            notifyError.message
+          );
         });
       }
     } catch (persistError) {
@@ -1434,11 +1492,13 @@ const MAX_SUBTITLE_CONTENT_LENGTH = 2 * 1024 * 1024; // 2 MB of text is already 
  *
  * Flow:
  * 1. Validate ownership + that a subtitle file already exists.
- * 2. Upload the EDITED content to Cloudinary as a NEW raw file.
- * 3. Only once the upload succeeds, delete the PREVIOUS
- *    Cloudinary file using its publicId (upload-then-delete,
- *    so a failed upload never destroys the existing subtitle).
- * 4. Persist the new file info + recomputed counts on the
+ * 2. Upload the EDITED content to Cloudinary, overwriting the
+ *    project's one fixed subtitle slot in place (atomic on
+ *    Cloudinary's side - if the upload fails, the existing file
+ *    is untouched, so the project is never left pointing at a
+ *    broken/missing subtitle, without ever having two files
+ *    exist at once).
+ * 3. Persist the new file info + recomputed counts on the
  *    project and log + broadcast the change over the socket.
  */
 const updateSubtitleController = async (req, res) => {
@@ -1529,29 +1589,35 @@ const updateSubtitleController = async (req, res) => {
     await fs.writeFile(temporaryFilePath, content, "utf8");
 
     // ----------------------------------------------------------
-    // 2. Upload the NEW file first.
+    // 2. Upload to the SAME fixed publicId the original pipeline
+    //    uses for the subtitle file ("original_subtitle.srt" in
+    //    webhook.controller.js), overwrite: true. Cloudinary
+    //    replaces it in place server-side - if this upload fails,
+    //    the existing file at that publicId is untouched, so the
+    //    project is never left pointing at a broken/missing file
+    //    (the same safety goal upload-then-delete was after, just
+    //    without ever having two files exist at once).
     // ----------------------------------------------------------
 
     const userFolder = `subtitle-app/users/${req.user._id}/projects/${project.projectId}/subtitles`;
+    const SUBTITLE_PUBLIC_ID = "original_subtitle.srt";
 
     const uploaded = await uploadToCloudinary(temporaryFilePath, {
       folder: userFolder,
       resourceType: "raw",
+      publicId: SUBTITLE_PUBLIC_ID,
+      overwrite: true,
     });
 
-    // ----------------------------------------------------------
-    // 3. Only delete the PREVIOUS file once the new one is safely
-    //    stored. A delete failure here is logged but must not
-    //    fail the request - the project already points at the
-    //    new, valid file.
-    // ----------------------------------------------------------
-
-    if (previousFile.publicId) {
+    // Safety net only: a subtitle could still be sitting at an
+    // old, differently-named publicId if it predates this
+    // fixed-slot scheme - only then is there a real leftover file.
+    if (previousFile.publicId && previousFile.publicId !== uploaded.publicId) {
       try {
         await deleteFromCloudinary(previousFile.publicId, "raw");
       } catch (cleanupError) {
         console.error(
-          "Failed to delete previous subtitle file from Cloudinary:",
+          "Failed to delete legacy subtitle file from Cloudinary:",
           cleanupError.message
         );
       }
@@ -1682,17 +1748,20 @@ const updateSubtitleController = async (req, res) => {
     if (shouldRegenerateOutput) {
       const projectMongoId = project._id;
 
-      setImmediate(() => {
-        regenerateOutputVideo({
+      // Enqueued (not setImmediate'd) so this survives a server
+      // restart and gets retried on failure - same reasoning as
+      // the "finalize-project" job in webhook.controller.js.
+      renderQueue
+        .add("regenerate-output", {
           projectMongoId,
           subtitleContent: content,
-        }).catch((error) => {
+        })
+        .catch((error) => {
           console.error(
-            `[OUTPUT REGENERATION] Project ${project.projectId} failed:`,
+            `[OUTPUT REGENERATION] Failed to enqueue project ${project.projectId}:`,
             error.message
           );
         });
-      });
     }
 
     return res.status(200).json({
@@ -1895,4 +1964,5 @@ module.exports = {
   renameProjectController,
   duplicateProjectController,
   deleteProjectController,
+  regenerateOutputVideo,
 };

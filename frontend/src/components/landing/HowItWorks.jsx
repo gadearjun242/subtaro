@@ -1,31 +1,27 @@
-import { motion } from "framer-motion";
-import { UploadCloud, Cpu, FileCheck2 } from "lucide-react";
+import { motion } from 'framer-motion'
+import { UploadCloud, Cpu, FileCheck2 } from 'lucide-react'
 
 const STEPS = [
   {
     icon: UploadCloud,
-    title: "Upload your file",
-    desc: "Drag in a video or audio file. It uploads straight to secure cloud storage.",
+    title: 'Upload your file',
+    desc: 'Drag in a video or audio file. It uploads straight to secure cloud storage.',
   },
-
   {
     icon: Cpu,
-    title: "Watch it process live",
-    desc: "Audio separation, diarization, transcription and subtitle generation — tracked step by step over a live socket connection.",
+    title: 'Watch it process live',
+    desc: 'Audio separation, diarization, transcription and subtitle generation — tracked step by step over a live socket connection.',
   },
   {
     icon: FileCheck2,
-    title: "Review, edit & export",
-    desc: "Play back the result, tweak subtitle lines if needed, and download the final SRT or captioned video.",
+    title: 'Review, edit & export',
+    desc: 'Play back the result, tweak subtitle lines if needed, and download the final SRT or captioned video.',
   },
-];
+]
 
 export default function HowItWorks() {
   return (
-    <section
-      id="how-it-works"
-      className="bg-slate-50 py-20 dark:bg-slate-900/40"
-    >
+    <section id="how-it-works" className="bg-slate-50 py-20 dark:bg-slate-900/40">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
@@ -50,16 +46,12 @@ export default function HowItWorks() {
               <span className="mt-4 text-xs font-bold uppercase tracking-wider text-brand-500">
                 Step {i + 1}
               </span>
-              <h3 className="mt-1.5 text-lg font-bold text-slate-900 dark:text-white">
-                {title}
-              </h3>
-              <p className="mt-2 max-w-xs text-sm text-slate-500 dark:text-slate-400">
-                {desc}
-              </p>
+              <h3 className="mt-1.5 text-lg font-bold text-slate-900 dark:text-white">{title}</h3>
+              <p className="mt-2 max-w-xs text-sm text-slate-500 dark:text-slate-400">{desc}</p>
             </motion.div>
           ))}
         </div>
       </div>
     </section>
-  );
+  )
 }

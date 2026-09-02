@@ -37,7 +37,13 @@ const projectStepSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["pending", "running", "success", "failed", "skipped"],
+      enum: [
+        "pending",
+        "running",
+        "success",
+        "failed",
+        "skipped",
+      ],
       default: "pending",
       required: true,
     },
@@ -66,8 +72,9 @@ const projectStepSchema = new mongoose.Schema(
   },
   {
     _id: false,
-  },
+  }
 );
+
 
 // ============================================================
 // CLOUDINARY / FILE SCHEMA
@@ -92,7 +99,11 @@ const fileSchema = new mongoose.Schema(
     // Cloudinary resource type
     resourceType: {
       type: String,
-      enum: ["video", "image", "raw"],
+      enum: [
+        "video",
+        "image",
+        "raw",
+      ],
       default: "raw",
     },
 
@@ -153,8 +164,9 @@ const fileSchema = new mongoose.Schema(
   },
   {
     _id: false,
-  },
+  }
 );
+
 
 // ============================================================
 // PROJECT LOG SCHEMA
@@ -183,7 +195,12 @@ const projectLogSchema = new mongoose.Schema(
 
     level: {
       type: String,
-      enum: ["info", "warning", "error", "debug"],
+      enum: [
+        "info",
+        "warning",
+        "error",
+        "debug",
+      ],
       default: "info",
     },
 
@@ -216,8 +233,9 @@ const projectLogSchema = new mongoose.Schema(
   },
   {
     _id: true,
-  },
+  }
 );
+
 
 // ============================================================
 // SUBTITLE FILE SCHEMA
@@ -250,7 +268,13 @@ const subtitleFileSchema = new mongoose.Schema(
 
     format: {
       type: String,
-      enum: ["srt", "vtt", "ass", "ssa", "txt"],
+      enum: [
+        "srt",
+        "vtt",
+        "ass",
+        "ssa",
+        "txt",
+      ],
       default: "srt",
     },
 
@@ -262,8 +286,9 @@ const subtitleFileSchema = new mongoose.Schema(
   },
   {
     _id: false,
-  },
+  }
 );
+
 
 // ============================================================
 // FINAL OUTPUT FILE
@@ -328,8 +353,9 @@ const outputFileSchema = new mongoose.Schema(
   },
   {
     _id: false,
-  },
+  }
 );
+
 
 // ============================================================
 // PROJECT SCHEMA
@@ -347,6 +373,7 @@ const projectSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+
 
     // ========================================================
     // PROJECT IDENTIFIERS
@@ -368,6 +395,7 @@ const projectSchema = new mongoose.Schema(
       trim: true,
       maxlength: 200,
     },
+
 
     // ========================================================
     // PROJECT STATUS
@@ -416,6 +444,7 @@ const projectSchema = new mongoose.Schema(
       maxlength: 5000,
     },
 
+
     // ========================================================
     // ORIGINAL USER INPUT
     // ========================================================
@@ -431,10 +460,14 @@ const projectSchema = new mongoose.Schema(
 
     inputType: {
       type: String,
-      enum: ["video", "audio"],
+      enum: [
+        "video",
+        "audio",
+      ],
       required: true,
       index: true,
     },
+
 
     // ========================================================
     // SUBTITLE DELIVERY MODE (video projects only)
@@ -448,11 +481,11 @@ const projectSchema = new mongoose.Schema(
     //                  re-encodes the video, works everywhere).
     //
     //   "selectable" - muxed as a soft/toggleable subtitle track
-    //                  into an .mkv container (like a DVD/MKV
-    //                  subtitle track - viewers can turn it on or
-    //                  off in a capable player). No re-encoding,
-    //                  so it's fast, but browsers can't preview
-    //                  .mkv natively - see BACKEND.md.
+    //                  into the .mp4 itself using the mov_text
+    //                  codec (viewers can turn it on or off in a
+    //                  capable player). No re-encoding, so it's
+    //                  fast, and it stays a single, directly
+    //                  playable .mp4 - see BACKEND.md.
     //
     // Chosen at project creation, can be changed on a later
     // subtitle edit (PATCH .../subtitle), which then re-renders
@@ -461,7 +494,10 @@ const projectSchema = new mongoose.Schema(
 
     subtitleMode: {
       type: String,
-      enum: ["embedded", "selectable"],
+      enum: [
+        "embedded",
+        "selectable",
+      ],
       default: "embedded",
     },
 
@@ -471,9 +507,15 @@ const projectSchema = new mongoose.Schema(
     // for audio projects. See services/subtitleStyle.presets.js.
     subtitleStyle: {
       type: String,
-      enum: ["classic", "bold_yellow", "minimal_top", "cinematic"],
+      enum: [
+        "classic",
+        "bold_yellow",
+        "minimal_top",
+        "cinematic",
+      ],
       default: "classic",
     },
+
 
     // ========================================================
     // SUBTITLE SERVICE
@@ -496,7 +538,13 @@ const projectSchema = new mongoose.Schema(
 
       status: {
         type: String,
-        enum: ["not_started", "submitted", "processing", "completed", "failed"],
+        enum: [
+          "not_started",
+          "submitted",
+          "processing",
+          "completed",
+          "failed",
+        ],
         default: "not_started",
       },
 
@@ -522,6 +570,7 @@ const projectSchema = new mongoose.Schema(
         trim: true,
       },
     },
+
 
     // ========================================================
     // PIPELINE STEPS
@@ -567,6 +616,7 @@ const projectSchema = new mongoose.Schema(
       ],
     },
 
+
     // ========================================================
     // SUBTITLE OUTPUT
     // ========================================================
@@ -577,7 +627,13 @@ const projectSchema = new mongoose.Schema(
     subtitle: {
       status: {
         type: String,
-        enum: ["pending", "processing", "completed", "failed", "not_required"],
+        enum: [
+          "pending",
+          "processing",
+          "completed",
+          "failed",
+          "not_required",
+        ],
         default: "pending",
       },
 
@@ -628,6 +684,7 @@ const projectSchema = new mongoose.Schema(
       },
     },
 
+
     // ========================================================
     // FINAL OUTPUT VIDEO
     // ========================================================
@@ -644,7 +701,13 @@ const projectSchema = new mongoose.Schema(
     output: {
       status: {
         type: String,
-        enum: ["pending", "processing", "completed", "failed", "not_required"],
+        enum: [
+          "pending",
+          "processing",
+          "completed",
+          "failed",
+          "not_required",
+        ],
         default: "pending",
       },
 
@@ -653,7 +716,10 @@ const projectSchema = new mongoose.Schema(
       // so the UI can show what the current file actually is).
       mode: {
         type: String,
-        enum: ["embedded", "selectable"],
+        enum: [
+          "embedded",
+          "selectable",
+        ],
         default: "embedded",
       },
 
@@ -667,6 +733,7 @@ const projectSchema = new mongoose.Schema(
         default: null,
       },
     },
+
 
     // ========================================================
     // NOTIFICATIONS
@@ -687,7 +754,12 @@ const projectSchema = new mongoose.Schema(
 
         status: {
           type: String,
-          enum: ["pending", "sent", "failed", "not_required"],
+          enum: [
+            "pending",
+            "sent",
+            "failed",
+            "not_required",
+          ],
           default: "pending",
         },
 
@@ -713,6 +785,7 @@ const projectSchema = new mongoose.Schema(
         },
       },
     },
+
 
     // ========================================================
     // PROCESSING INFORMATION
@@ -742,6 +815,7 @@ const projectSchema = new mongoose.Schema(
       },
     },
 
+
     // ========================================================
     // APPLICATION LOGS
     // ========================================================
@@ -750,6 +824,7 @@ const projectSchema = new mongoose.Schema(
       type: [projectLogSchema],
       default: [],
     },
+
 
     // ========================================================
     // FINAL FAILURE INFORMATION
@@ -775,6 +850,7 @@ const projectSchema = new mongoose.Schema(
       },
     },
 
+
     // ========================================================
     // ANALYTICS / SOURCE METADATA
     // ========================================================
@@ -795,7 +871,11 @@ const projectSchema = new mongoose.Schema(
 
       source: {
         type: String,
-        enum: ["upload", "api", "other"],
+        enum: [
+          "upload",
+          "api",
+          "other",
+        ],
         default: "upload",
       },
     },
@@ -804,8 +884,9 @@ const projectSchema = new mongoose.Schema(
     timestamps: true,
     versionKey: false,
     minimize: true,
-  },
+  }
 );
+
 
 // ============================================================
 // INDEXES
@@ -826,6 +907,7 @@ projectSchema.index({
   createdAt: -1,
 });
 
+
 // User dashboard filtering by status.
 
 projectSchema.index({
@@ -833,6 +915,7 @@ projectSchema.index({
   status: 1,
   createdAt: -1,
 });
+
 
 // User + input type filtering.
 
@@ -842,11 +925,13 @@ projectSchema.index({
   createdAt: -1,
 });
 
+
 // External subtitle service callback lookup.
 
 projectSchema.index({
   "subtitleService.projectId": 1,
 });
+
 
 // Processing queue / operational queries.
 
@@ -854,6 +939,7 @@ projectSchema.index({
   status: 1,
   createdAt: -1,
 });
+
 
 // ============================================================
 // VALIDATION
@@ -863,43 +949,66 @@ projectSchema.index({
 //
 // The application always expects exactly five pipeline steps.
 
-projectSchema.path("steps").validate(function validateSteps(steps) {
-  if (!Array.isArray(steps)) {
-    return false;
-  }
+projectSchema.path("steps").validate(
+  function validateSteps(steps) {
+    if (!Array.isArray(steps)) {
+      return false;
+    }
 
-  const numbers = steps
-    .map((step) => Number(step.stepNumber))
-    .sort((a, b) => a - b);
+    const numbers =
+      steps
+        .map(
+          (step) =>
+            Number(step.stepNumber)
+        )
+        .sort(
+          (a, b) => a - b
+        );
 
-  return (
-    numbers.length === 5 &&
-    numbers[0] === 1 &&
-    numbers[1] === 2 &&
-    numbers[2] === 3 &&
-    numbers[3] === 4 &&
-    numbers[4] === 5
-  );
-}, "Project must contain exactly five pipeline steps.");
+    return (
+      numbers.length === 5 &&
+      numbers[0] === 1 &&
+      numbers[1] === 2 &&
+      numbers[2] === 3 &&
+      numbers[3] === 4 &&
+      numbers[4] === 5
+    );
+  },
+  "Project must contain exactly five pipeline steps."
+);
+
 
 // ============================================================
 // INSTANCE HELPERS
 // ============================================================
 
-projectSchema.methods.isCompleted = function isCompleted() {
-  return this.status === "completed";
-};
+projectSchema.methods.isCompleted =
+  function isCompleted() {
+    return this.status === "completed";
+  };
 
-projectSchema.methods.isProcessing = function isProcessing() {
-  return this.status === "processing" || this.status === "queued";
-};
 
-projectSchema.methods.hasFailed = function hasFailed() {
-  return this.status === "failed";
-};
+projectSchema.methods.isProcessing =
+  function isProcessing() {
+    return (
+      this.status === "processing" ||
+      this.status === "queued"
+    );
+  };
+
+
+projectSchema.methods.hasFailed =
+  function hasFailed() {
+    return this.status === "failed";
+  };
+
 
 // ============================================================
 // EXPORT
 // ============================================================
 
-module.exports = mongoose.model("Project", projectSchema);
+module.exports =
+  mongoose.model(
+    "Project",
+    projectSchema
+  );

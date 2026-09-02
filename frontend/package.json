@@ -6,8 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "dist":"rm -rf ../backend/public/dist && npm run build && mv dist ../backend/public/dist",
     "lint": "oxlint",
+    "dist":"rm -rf ../backend/public/dist && npm run build && mkdir -p ../backend/public && mv dist ../backend/public/dist",
     "preview": "vite preview"
   },
   "dependencies": {
@@ -15,6 +15,7 @@
     "axios": "^1.20.0",
     "clsx": "^2.1.1",
     "framer-motion": "^13.1.1",
+    "lottie-react": "^2.4.1",
     "lucide-react": "^1.35.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",

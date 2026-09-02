@@ -54,17 +54,18 @@ export default function SyncedCaptions({
                   </span>
                 ))}
               </motion.p>
-            ) : (
+            ) : formatTimecode(currentTime) === "00:00" ? (
               <motion.p
                 key="empty"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="text-sm text-slate-300 dark:text-slate-600"
+                className="text-sm text-slate-400 dark:text-white-700"
               >
-                — no caption at {formatTimecode(currentTime)} —
+                Play the audio to see synced captions.
+                {/* — no caption at {formatTimecode(currentTime)} — */}
               </motion.p>
-            )}
+            ): null}
           </AnimatePresence>
         </div>
       )}

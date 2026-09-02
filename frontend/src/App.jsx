@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from 'react-hot-toast'
 import PublicLayout from '@/layouts/PublicLayout'
@@ -5,24 +6,28 @@ import AuthLayout from '@/layouts/AuthLayout'
 import DashboardLayout from '@/layouts/DashboardLayout'
 import ProtectedRoute from '@/routes/ProtectedRoute'
 import PublicOnlyRoute from '@/routes/PublicOnlyRoute'
+import FullScreenLoader from '@/components/common/FullScreenLoader'
 
-import Landing from '@/pages/public/Landing'
-import Pricing from '@/pages/public/Pricing'
-import Privacy from '@/pages/public/Privacy'
-import Terms from '@/pages/public/Terms'
-import Contact from '@/pages/public/Contact'
-import NotFound from '@/pages/public/NotFound'
+// Every page is code-split by route: each import() becomes its own
+// chunk, so e.g. recharts (Analytics-only) or the pptx-sized dashboard
+// bundle never loads on the public landing page, and vice versa.
+const Landing = lazy(() => import('@/pages/public/Landing'))
+const Pricing = lazy(() => import('@/pages/public/Pricing'))
+const Privacy = lazy(() => import('@/pages/public/Privacy'))
+const Terms = lazy(() => import('@/pages/public/Terms'))
+const Contact = lazy(() => import('@/pages/public/Contact'))
+const NotFound = lazy(() => import('@/pages/public/NotFound'))
 
-import Login from '@/pages/auth/Login'
-import Register from '@/pages/auth/Register'
-import VerifyEmail from '@/pages/auth/VerifyEmail'
+const Login = lazy(() => import('@/pages/auth/Login'))
+const Register = lazy(() => import('@/pages/auth/Register'))
+const VerifyEmail = lazy(() => import('@/pages/auth/VerifyEmail'))
 
-import Overview from '@/pages/dashboard/Overview'
-import ProjectsList from '@/pages/dashboard/ProjectsList'
-import NewProject from '@/pages/dashboard/NewProject'
-import ProjectDetail from '@/pages/dashboard/ProjectDetail'
-import Analytics from '@/pages/dashboard/Analytics'
-import Profile from '@/pages/dashboard/Profile'
+const Overview = lazy(() => import('@/pages/dashboard/Overview'))
+const ProjectsList = lazy(() => import('@/pages/dashboard/ProjectsList'))
+const NewProject = lazy(() => import('@/pages/dashboard/NewProject'))
+const ProjectDetail = lazy(() => import('@/pages/dashboard/ProjectDetail'))
+const Analytics = lazy(() => import('@/pages/dashboard/Analytics'))
+const Profile = lazy(() => import('@/pages/dashboard/Profile'))
 
 export default function App() {
   return (
@@ -35,41 +40,43 @@ export default function App() {
           error: { iconTheme: { primary: '#ef4444', secondary: 'white' } },
         }}
       />
-      <Routes>
-        {/* Public site */}
-        <Route element={<PublicLayout />}>
-          <Route index element={<Landing />} />
-          <Route path="pricing" element={<Pricing />} />
-          <Route path="privacy" element={<Privacy />} />
-          <Route path="terms" element={<Terms />} />
-          <Route path="contact" element={<Contact />} />
-        </Route>
-
-        {/* Auth (redirects to dashboard if already logged in) */}
-        <Route element={<PublicOnlyRoute />}>
-          <Route element={<AuthLayout />}>
-            <Route path="login" element={<Login />} />
-            <Route path="register" element={<Register />} />
+      <Suspense fallback={<FullScreenLoader label="Loading…" />}>
+        <Routes>
+          {/* Public site */}
+          <Route element={<PublicLayout />}>
+            <Route index element={<Landing />} />
+            <Route path="pricing" element={<Pricing />} />
+            <Route path="privacy" element={<Privacy />} />
+            <Route path="terms" element={<Terms />} />
+            <Route path="contact" element={<Contact />} />
           </Route>
-        </Route>
 
-        {/* Standalone - works whether logged in or not */}
-        <Route path="verify-email/:token" element={<VerifyEmail />} />
-
-        {/* Private dashboard */}
-        <Route element={<ProtectedRoute />}>
-          <Route path="dashboard" element={<DashboardLayout />}>
-            <Route index element={<Overview />} />
-            <Route path="projects" element={<ProjectsList />} />
-            <Route path="projects/new" element={<NewProject />} />
-            <Route path="projects/:projectId" element={<ProjectDetail />} />
-            <Route path="analytics" element={<Analytics />} />
-            <Route path="profile" element={<Profile />} />
+          {/* Auth (redirects to dashboard if already logged in) */}
+          <Route element={<PublicOnlyRoute />}>
+            <Route element={<AuthLayout />}>
+              <Route path="login" element={<Login />} />
+              <Route path="register" element={<Register />} />
+            </Route>
           </Route>
-        </Route>
 
-        <Route path="*" element={<NotFound />} />
-      </Routes>
+          {/* Standalone - works whether logged in or not */}
+          <Route path="verify-email/:token" element={<VerifyEmail />} />
+
+          {/* Private dashboard */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="dashboard" element={<DashboardLayout />}>
+              <Route index element={<Overview />} />
+              <Route path="projects" element={<ProjectsList />} />
+              <Route path="projects/new" element={<NewProject />} />
+              <Route path="projects/:projectId" element={<ProjectDetail />} />
+              <Route path="analytics" element={<Analytics />} />
+              <Route path="profile" element={<Profile />} />
+            </Route>
+          </Route>
+
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </Suspense>
     </BrowserRouter>
   )
 }

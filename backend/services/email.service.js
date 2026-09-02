@@ -137,22 +137,11 @@ async function sendProjectCompletionEmail({ to, name, project }) {
   const rows = [
     ["Project", project.name],
     ["Type", project.inputType === "video" ? "Video" : "Audio"],
-    project.subtitle?.subtitleCount != null
-      ? ["Subtitle lines", String(project.subtitle.subtitleCount)]
-      : null,
-    project.subtitle?.wordCount != null
-      ? ["Words", String(project.subtitle.wordCount)]
-      : null,
-    project.subtitle?.languageName
-      ? ["Language", project.subtitle.languageName]
-      : null,
+    project.subtitle?.subtitleCount != null ? ["Subtitle lines", String(project.subtitle.subtitleCount)] : null,
+    project.subtitle?.wordCount != null ? ["Words", String(project.subtitle.wordCount)] : null,
+    project.subtitle?.languageName ? ["Language", project.subtitle.languageName] : null,
     project.inputType === "video"
-      ? [
-          "Delivery",
-          project.subtitleMode === "selectable"
-            ? "Selectable subtitle track (.mkv)"
-            : "Burned-in captions",
-        ]
+      ? ["Delivery", project.subtitleMode === "selectable" ? "Selectable subtitle track (.mp4)" : "Burned-in captions"]
       : null,
   ].filter(Boolean);
 
@@ -162,7 +151,7 @@ async function sendProjectCompletionEmail({ to, name, project }) {
         `<tr>
           <td style="padding:6px 0;color:#94a3b8;">${label}</td>
           <td style="padding:6px 0;text-align:right;font-weight:600;color:#0f172a;">${value}</td>
-        </tr>`,
+        </tr>`
     )
     .join("");
 

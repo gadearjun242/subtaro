@@ -1,48 +1,89 @@
-FROM node:20-bookworm
+FROM node:22-bookworm-slim
 
-# Install system dependencies and fonts
-RUN apt-get update && apt-get install -y \
-    ffmpeg \
-    fonts-deva \
-    fonts-noto \
-    fonts-noto-core \
-    fonts-noto-extra \
-    fonts-indic \
-    fontconfig \
-    && rm -rf /var/lib/apt/lists/*
+# ============================================================
+# System dependencies
+# ============================================================
 
-# Refresh font cache
-RUN fc-cache -f -v
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        ffmpeg \
+        fontconfig \
+        fonts-noto \
+        ca-certificates \
+        redis-server \
+        supervisor && \
+    fc-cache -f && \
+    rm -rf /var/lib/apt/lists/*
 
-# Create app directory
+# ============================================================
+# Verify FFmpeg
+# ============================================================
+
+RUN ffmpeg -filters 2>/dev/null | grep -q "subtitles" || \
+    (echo "FFmpeg subtitles filter missing" && exit 1)
+
+RUN command -v ffprobe >/dev/null 2>&1 || \
+    (echo "ffprobe missing" && exit 1)
+
+# ============================================================
+# Application
+# ============================================================
+
 WORKDIR /app
 
-# Install dependencies first (better Docker caching)
-COPY package*.json ./
-RUN npm install
+COPY package.json package-lock.json* ./
 
-# Copy backend source
+RUN npm ci --omit=dev
+
 COPY . .
 
-# Backend port
+RUN mkdir -p /tmp/subtitle
+
+# ============================================================
+# Supervisor configuration
+# ============================================================
+
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+
+# ============================================================
+# Environment
+# ============================================================
+
+ENV NODE_ENV=production
+ENV PORT=5000
+ENV REDIS_URL=redis://127.0.0.1:6379
+
 EXPOSE 5000
 
-# Start backend
-CMD ["node", "server.js"]
+# ============================================================
+# Container health check
+# ============================================================
+
+HEALTHCHECK --interval=30s \
+            --timeout=10s \
+            --start-period=30s \
+            --retries=3 \
+    CMD node -e "require('http').get('http://127.0.0.1:' + (process.env.PORT || 5000) + '/health', r => process.exit(r.statusCode === 200 ? 0 : 1)).on('error', () => process.exit(1))"
+
+# ============================================================
+# Start Redis + Node
+# ============================================================
+
+CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
 
 
-# Build and run
-# From your backend folder:
+# to  build
+# docker build -t subtaro-backend .
 
-# docker build -t subtaro .
 
-# Then:
 
-# docker run -p 5000:5000 subtaro
+# to run
+# docker run --env-file .env -p 5000:5000 subtaro-backend
+
 
 # to stop
-# docker stop subtaro
+# docker stop subtaro-backend
 
 # to remove
 
-# docker rm subtaro
+# docker rm subtaro-backend

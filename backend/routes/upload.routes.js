@@ -57,6 +57,8 @@ router.post(
     upload.single("file")(req, res, (error) => {
       if (!error) return next();
 
+      console.log({error})
+
       // Multer errors (file too large, unexpected field/type, etc.)
       // otherwise fall through to Express's default HTML error
       // page - turn them into clean JSON instead.

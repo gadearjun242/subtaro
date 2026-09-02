@@ -9,16 +9,21 @@ const {
   resumeSubtitleProject,
 } = require("./subtitle.service");
 
-const { emitProjectEvent } = require("./socket.service");
+const {
+  emitProjectEvent,
+} = require("./socket.service");
 
-const SUBTITLE_SERVICE_URL = process.env.SUBTITLE_SERVICE_URL.replace(
-  /\/+$/,
-  "",
-);
+const SUBTITLE_SERVICE_URL =
+  (
+    process.env.SUBTITLE_SERVICE_URL
+  )?.replace(/\/+$/, "");
 
-const PUBLIC_API_URL = (
-  process.env.PUBLIC_API_URL || "http://localhost:5000"
-).replace(/\/+$/, "");
+const PUBLIC_API_URL =
+  (
+    process.env.PUBLIC_API_URL ||
+    "http://localhost:5000"
+  ).replace(/\/+$/, "");
+
 
 // ============================================================
 // PIPELINE DEFINITIONS
@@ -47,25 +52,34 @@ const PIPELINE_STEPS = [
   },
 ];
 
+
 // ============================================================
 // HELPERS
 // ============================================================
 
-const WEBHOOK_MASTER_SECRET = process.env.WEBHOOK_MASTER_SECRET;
+
+const WEBHOOK_MASTER_SECRET =
+  process.env.WEBHOOK_MASTER_SECRET;
 
 if (!WEBHOOK_MASTER_SECRET) {
-  throw new Error("WEBHOOK_MASTER_SECRET is required");
+  throw new Error(
+    "WEBHOOK_MASTER_SECRET is required"
+  );
 }
 
 function generateWebhookToken(projectId) {
   return crypto
-    .createHmac("sha256", WEBHOOK_MASTER_SECRET)
+    .createHmac(
+      "sha256",
+      WEBHOOK_MASTER_SECRET
+    )
     .update(String(projectId))
     .digest("hex");
 }
 
 function buildWebhookUrl(projectId) {
-  const token = generateWebhookToken(projectId);
+  const token =
+    generateWebhookToken(projectId);
 
   return (
     `${PUBLIC_API_URL}` +
@@ -74,15 +88,26 @@ function buildWebhookUrl(projectId) {
   );
 }
 
-function getStepDefinition(stepNumber) {
+
+
+
+function getStepDefinition(
+  stepNumber
+) {
   return (
-    PIPELINE_STEPS.find((step) => step.stepNumber === Number(stepNumber)) ||
-    null
+    PIPELINE_STEPS.find(
+      (step) =>
+        step.stepNumber ===
+        Number(stepNumber)
+    ) || null
   );
 }
 
+
 function normalizeStatus(status) {
-  switch (String(status || "").toLowerCase()) {
+  switch (
+    String(status || "").toLowerCase()
+  ) {
     case "queued":
       return "queued";
 
@@ -103,80 +128,152 @@ function normalizeStatus(status) {
   }
 }
 
-function calculateDuration(startedAt, completedAt) {
-  if (!startedAt || !completedAt) {
+
+function calculateDuration(
+  startedAt,
+  completedAt
+) {
+  if (
+    !startedAt ||
+    !completedAt
+  ) {
     return null;
   }
 
-  const started = new Date(startedAt).getTime();
+  const started =
+    new Date(startedAt).getTime();
 
-  const completed = new Date(completedAt).getTime();
+  const completed =
+    new Date(completedAt).getTime();
 
-  if (!Number.isFinite(started) || !Number.isFinite(completed)) {
+  if (
+    !Number.isFinite(started) ||
+    !Number.isFinite(completed)
+  ) {
     return null;
   }
 
-  return Math.max(0, (completed - started) / 1000);
-}
-
-function findLocalStep(project, stepNumber) {
-  return project.steps.find(
-    (step) => Number(step.stepNumber) === Number(stepNumber),
+  return Math.max(
+    0,
+    (completed - started) / 1000
   );
 }
 
-function ensureProjectSteps(project) {
+
+function findLocalStep(
+  project,
+  stepNumber
+) {
+  return project.steps.find(
+    (step) =>
+      Number(step.stepNumber) ===
+      Number(stepNumber)
+  );
+}
+
+
+function ensureProjectSteps(
+  project
+) {
   if (
     Array.isArray(project.steps) &&
-    project.steps.length === PIPELINE_STEPS.length
+    project.steps.length ===
+    PIPELINE_STEPS.length
   ) {
     return;
   }
 
-  project.steps = PIPELINE_STEPS.map((step) => ({
-    stepNumber: step.stepNumber,
+  project.steps =
+    PIPELINE_STEPS.map(
+      (step) => ({
+        stepNumber:
+          step.stepNumber,
 
-    name: step.name,
+        name:
+          step.name,
 
-    status: "pending",
+        status:
+          "pending",
 
-    startedAt: null,
+        startedAt:
+          null,
 
-    completedAt: null,
+        completedAt:
+          null,
 
-    durationSeconds: null,
+        durationSeconds:
+          null,
 
-    error: null,
-  }));
+        error:
+          null,
+       
+      })
+    );
 }
 
-function extractPipelineStatistics(serviceState) {
-  const step4 = serviceState?.steps?.["4"]?.result || {};
 
-  const step5 = serviceState?.steps?.["5"]?.result || {};
+function extractPipelineStatistics(
+  serviceState
+) {
+  const step4 =
+    serviceState?.steps?.["4"]?.result ||
+    {};
+
+  const step5 =
+    serviceState?.steps?.["5"]?.result ||
+    {};
 
   return {
-    language: step4.language || step5.language || null,
+    language:
+      step4.language ||
+      step5.language ||
+      null,
 
-    wordCount: Number.isFinite(Number(step4.total_words))
-      ? Number(step4.total_words)
-      : null,
+    wordCount:
+      Number.isFinite(
+        Number(
+          step4.total_words
+        )
+      )
+        ? Number(
+          step4.total_words
+        )
+        : null,
 
-    subtitleCount: Number.isFinite(Number(step5.subtitle_count))
-      ? Number(step5.subtitle_count)
-      : null,
+    subtitleCount:
+      Number.isFinite(
+        Number(
+          step5.subtitle_count
+        )
+      )
+        ? Number(
+          step5.subtitle_count
+        )
+        : null,
 
-    speakerCount: Number.isFinite(Number(step5.speaker_count))
-      ? Number(step5.speaker_count)
-      : null,
+    speakerCount:
+      Number.isFinite(
+        Number(
+          step5.speaker_count
+        )
+      )
+        ? Number(
+          step5.speaker_count
+        )
+        : null,
   };
 }
+
 
 // ============================================================
 // CREATE PROJECT
 // ============================================================
 
-async function createProject({ userId, projectId }) {
+
+async function createProject({
+  userId,
+  projectId,
+}) {
   if (!userId) {
     throw new Error("userId is required");
   }
@@ -185,17 +282,22 @@ async function createProject({ userId, projectId }) {
     throw new Error("projectId is required");
   }
 
-  const project = await Project.findOne({
-    projectId,
-    userId,
-  });
+  const project =
+    await Project.findOne({
+      projectId,
+      userId,
+    });
 
   if (!project) {
     throw new Error("Project not found");
   }
 
-  if (!project.input?.url) {
-    throw new Error("Project source file URL is missing");
+  if (
+    !project.input?.url
+  ) {
+    throw new Error(
+      "Project source file URL is missing"
+    );
   }
 
   if (
@@ -203,10 +305,14 @@ async function createProject({ userId, projectId }) {
     project.status === "queued" ||
     project.subtitleService?.status === "processing"
   ) {
-    throw new Error("Project is already processing");
+    throw new Error(
+      "Project is already processing"
+    );
   }
 
-  if (project.status === "completed") {
+  if (
+    project.status === "completed"
+  ) {
     return {
       project,
       alreadyCompleted: true,
@@ -214,42 +320,61 @@ async function createProject({ userId, projectId }) {
   }
 
   const serviceProjectId =
-    project.subtitleService?.projectId || project.projectId;
+    project.subtitleService?.projectId ||
+    project.projectId;
 
-  const webhookUrl = buildWebhookUrl(serviceProjectId);
+  const webhookUrl =
+    buildWebhookUrl(
+      serviceProjectId
+    );
 
   ensureProjectSteps(project);
 
   project.subtitleService = {
-    ...(project.subtitleService?.toObject?.() || project.subtitleService || {}),
+    ...(project.subtitleService?.toObject?.() ||
+      project.subtitleService ||
+      {}),
 
-    projectId: serviceProjectId,
+    projectId:
+      serviceProjectId,
 
-    status: "submitted",
+    status:
+      "submitted",
 
-    submittedAt: new Date(),
+    submittedAt:
+      new Date(),
 
-    startedAt: null,
+    startedAt:
+      null,
 
-    completedAt: null,
+    completedAt:
+      null,
   };
 
-  project.status = "queued";
+  project.status =
+    "queued";
 
-  project.currentStep = null;
+  project.currentStep =
+    null;
 
-  project.currentStepName = null;
+  project.currentStepName =
+    null;
 
-  project.error = null;
+  project.error =
+    null;
 
-  project.failure = null;
+  project.failure =
+    null;
 
   project.processing = {
     ...(project.processing || {}),
 
-    startedAt: project.processing?.startedAt || new Date(),
+    startedAt:
+      project.processing?.startedAt ||
+      new Date(),
 
-    completedAt: null,
+    completedAt:
+      null,
   };
 
   await project.save();
@@ -257,19 +382,25 @@ async function createProject({ userId, projectId }) {
   let serviceResponse;
 
   try {
-    serviceResponse = await startSubtitleProject({
-      projectId: serviceProjectId,
+    serviceResponse =
+      await startSubtitleProject({
+        projectId:
+          serviceProjectId,
 
-      fileUrl: project.input.url,
+        fileUrl:
+          project.input.url,
 
-      webhookUrl,
-    });
+        webhookUrl,
+      });
   } catch (error) {
-    project.status = "failed";
+    project.status =
+      "failed";
 
-    project.subtitleService.status = "failed";
+    project.subtitleService.status =
+      "failed";
 
-    project.error = error.message;
+    project.error =
+      error.message;
 
     project.failure = {
       step: null,
@@ -282,36 +413,49 @@ async function createProject({ userId, projectId }) {
     await emitProjectEvent({
       projectId,
       userId,
-      type: "pipeline_submission_failed",
-      status: "failed",
-      stepNumber: null,
-      message: error.message,
+      type:
+        "pipeline_submission_failed",
+      status:
+        "failed",
+      stepNumber:
+        null,
+      message:
+        error.message,
       data: {
-        error: error.message,
+        error:
+          error.message,
       },
     });
 
     throw error;
   }
 
-  project.subtitleService.status = "processing";
+  project.subtitleService.status =
+    "processing";
 
   project.subtitleService.projectId =
-    serviceResponse.project_id || serviceProjectId;
+    serviceResponse.project_id ||
+    serviceProjectId;
 
   await project.save();
 
   await emitProjectEvent({
     projectId,
     userId,
-    type: "pipeline_submitted",
-    status: "processing",
-    stepNumber: null,
-    message: "Project submitted to subtitle processing service.",
+    type:
+      "pipeline_submitted",
+    status:
+      "processing",
+    stepNumber:
+      null,
+    message:
+      "Project submitted to subtitle processing service.",
     data: {
-      serviceProjectId: project.subtitleService.projectId,
+      serviceProjectId:
+        project.subtitleService.projectId,
 
-      serviceStatus: serviceResponse.status,
+      serviceStatus:
+        serviceResponse.status,
     },
   });
 
@@ -322,99 +466,166 @@ async function createProject({ userId, projectId }) {
   };
 }
 
+
 // ============================================================
 // APPLY FASTAPI STATUS TO MONGODB
 // ============================================================
 
-async function syncProjectStatus({ projectId, serviceState }) {
-  const project = await Project.findOne({
-    projectId,
-  });
+async function syncProjectStatus({
+  projectId,
+  serviceState,
+}) {
+  const project =
+    await Project.findOne({
+      projectId,
+    });
 
   if (!project) {
-    throw new Error(`Project not found: ${projectId}`);
+    throw new Error(
+      `Project not found: ${projectId}`
+    );
   }
 
-  const userId = project.userId.toString();
+  const userId =
+    project.userId.toString();
 
-  ensureProjectSteps(project);
+  ensureProjectSteps(
+    project
+  );
 
-  let shouldEmit = false;
+  let shouldEmit =
+    false;
 
   // ----------------------------------------------------------
   // Overall service state
   // ----------------------------------------------------------
 
-  const normalizedStatus = normalizeStatus(serviceState.status);
+  const normalizedStatus =
+    normalizeStatus(
+      serviceState.status
+    );
 
-  if (project.status !== normalizedStatus) {
-    project.status = normalizedStatus;
+  if (
+    project.status !==
+    normalizedStatus
+  ) {
+    project.status =
+      normalizedStatus;
 
-    shouldEmit = true;
+    shouldEmit =
+      true;
   }
 
-  project.currentStep = serviceState.current_step ?? null;
+  project.currentStep =
+    serviceState.current_step ??
+    null;
 
-  project.currentStepName = serviceState.current_step_name ?? null;
+  project.currentStepName =
+    serviceState.current_step_name ??
+    null;
 
-  project.lastCompletedStep = Number(serviceState.last_completed_step || 0);
+  project.lastCompletedStep =
+    Number(
+      serviceState.last_completed_step ||
+      0
+    );
 
-  project.error = serviceState.error || null;
+  project.error =
+    serviceState.error ||
+    null;
 
   // ----------------------------------------------------------
   // Sync five pipeline steps
   // ----------------------------------------------------------
 
-  for (const definition of PIPELINE_STEPS) {
-    const remoteStep = serviceState.steps?.[String(definition.stepNumber)];
+  for (
+    const definition
+    of PIPELINE_STEPS
+  ) {
+    const remoteStep =
+      serviceState.steps?.[
+      String(
+        definition.stepNumber
+      )
+      ];
 
     if (!remoteStep) {
       continue;
     }
 
-    const localStep = findLocalStep(project, definition.stepNumber);
+    const localStep =
+      findLocalStep(
+        project,
+        definition.stepNumber
+      );
 
     if (!localStep) {
       continue;
     }
 
-    const oldStatus = localStep.status;
+    const oldStatus =
+      localStep.status;
 
-    const newStatus = remoteStep.status || "pending";
+    const newStatus =
+      remoteStep.status ||
+      "pending";
 
-    localStep.status = newStatus;
+    localStep.status =
+      newStatus;
 
-    localStep.startedAt = remoteStep.started_at
-      ? new Date(remoteStep.started_at)
-      : localStep.startedAt;
+    localStep.startedAt =
+      remoteStep.started_at
+        ? new Date(
+          remoteStep.started_at
+        )
+        : localStep.startedAt;
 
-    localStep.completedAt = remoteStep.completed_at
-      ? new Date(remoteStep.completed_at)
-      : localStep.completedAt;
+    localStep.completedAt =
+      remoteStep.completed_at
+        ? new Date(
+          remoteStep.completed_at
+        )
+        : localStep.completedAt;
 
-    localStep.durationSeconds = calculateDuration(
-      remoteStep.started_at,
-      remoteStep.completed_at,
-    );
+    localStep.durationSeconds =
+      calculateDuration(
+        remoteStep.started_at,
+        remoteStep.completed_at
+      );
 
-    localStep.error = remoteStep.error || null;
+    localStep.error =
+      remoteStep.error ||
+      null;
+
+    
 
     // --------------------------------------------------------
     // Emit only on actual state transitions.
     // --------------------------------------------------------
 
-    if (oldStatus !== newStatus) {
-      shouldEmit = true;
+    if (
+      oldStatus !==
+      newStatus
+    ) {
+      shouldEmit =
+        true;
 
       await emitProjectEvent({
         projectId,
         userId,
-        type: "step_status_updated",
-        status: newStatus,
-        stepNumber: definition.stepNumber,
-        message: `Step ${definition.stepNumber}: ${definition.name} → ${newStatus}`,
+        type:
+          "step_status_updated",
+        status:
+          newStatus,
+        stepNumber:
+          definition.stepNumber,
+        message:
+          `Step ${definition.stepNumber}: ${definition.name} → ${newStatus}`,
         data: {
-          step: localStep.toObject ? localStep.toObject() : localStep,
+          step:
+            localStep.toObject
+              ? localStep.toObject()
+              : localStep,
         },
       });
     }
@@ -424,81 +635,137 @@ async function syncProjectStatus({ projectId, serviceState }) {
   // Extract statistics
   // ----------------------------------------------------------
 
-  const statistics = extractPipelineStatistics(serviceState);
+  const statistics =
+    extractPipelineStatistics(
+      serviceState
+    );
 
-  if (statistics.language) {
-    project.subtitleService = project.subtitleService || {};
+  if (
+    statistics.language
+  ) {
+    project.subtitleService =
+      project.subtitleService ||
+      {};
 
-    project.subtitleService.language = statistics.language;
+    project.subtitleService
+      .language =
+      statistics.language;
   }
 
   // ----------------------------------------------------------
   // Store useful pipeline metadata
   // ----------------------------------------------------------
 
-  project.pipeline = project.pipeline || {};
+  project.pipeline =
+    project.pipeline ||
+    {};
 
-  if (statistics.language) {
-    project.pipeline.language = statistics.language;
+  if (
+    statistics.language
+  ) {
+    project.pipeline.language =
+      statistics.language;
   }
 
-  if (statistics.wordCount !== null) {
-    project.pipeline.wordCount = statistics.wordCount;
+  if (
+    statistics.wordCount !== null
+  ) {
+    project.pipeline.wordCount =
+      statistics.wordCount;
   }
 
-  if (statistics.subtitleCount !== null) {
-    project.pipeline.subtitleCount = statistics.subtitleCount;
+  if (
+    statistics.subtitleCount !== null
+  ) {
+    project.pipeline.subtitleCount =
+      statistics.subtitleCount;
   }
 
-  if (statistics.speakerCount !== null) {
-    project.pipeline.speakerCount = statistics.speakerCount;
+  if (
+    statistics.speakerCount !== null
+  ) {
+    project.pipeline.speakerCount =
+      statistics.speakerCount;
   }
 
   // ----------------------------------------------------------
   // Pipeline completed
   // ----------------------------------------------------------
 
-  if (serviceState.status === "completed") {
-    const completedAt = serviceState.completed_at
-      ? new Date(serviceState.completed_at)
-      : new Date();
+  if (
+    serviceState.status ===
+    "completed"
+  ) {
+    const completedAt =
+      serviceState.completed_at
+        ? new Date(
+          serviceState.completed_at
+        )
+        : new Date();
 
-    project.processing = project.processing || {};
+    project.processing =
+      project.processing ||
+      {};
 
-    project.processing.completedAt = completedAt;
+    project.processing.completedAt =
+      completedAt;
 
-    if (project.processing.startedAt) {
-      project.processing.durationSeconds = calculateDuration(
-        project.processing.startedAt,
-        completedAt,
-      );
+    if (
+      project.processing
+        .startedAt
+    ) {
+      project.processing
+        .durationSeconds =
+        calculateDuration(
+          project.processing
+            .startedAt,
+          completedAt
+        );
     }
 
-    project.subtitleService.status = "completed";
+    project.subtitleService
+      .status =
+      "completed";
 
-    project.subtitleService.completedAt = completedAt;
+    project.subtitleService
+      .completedAt =
+      completedAt;
 
-    shouldEmit = true;
+    shouldEmit =
+      true;
   }
 
   // ----------------------------------------------------------
   // Pipeline failed
   // ----------------------------------------------------------
 
-  if (serviceState.status === "failed") {
-    project.subtitleService = project.subtitleService || {};
+  if (
+    serviceState.status ===
+    "failed"
+  ) {
+    project.subtitleService =
+      project.subtitleService ||
+      {};
 
-    project.subtitleService.status = "failed";
+    project.subtitleService
+      .status =
+      "failed";
 
     project.failure = {
-      step: serviceState.current_step ?? null,
+      step:
+        serviceState.current_step ??
+        null,
 
-      message: serviceState.error || "Subtitle service failed.",
+      message:
+        serviceState.error ||
+        "Subtitle service failed.",
 
-      occurredAt: new Date(),
+      occurredAt:
+        new Date(),
     };
 
-    shouldEmit = true;
+    shouldEmit =
+      true;
   }
 
   await project.save();
@@ -507,29 +774,45 @@ async function syncProjectStatus({ projectId, serviceState }) {
     await emitProjectEvent({
       projectId,
       userId,
-      type: "project_status_updated",
-      status: project.status,
-      stepNumber: project.currentStep,
+      type:
+        "project_status_updated",
+      status:
+        project.status,
+      stepNumber:
+        project.currentStep,
       message:
-        serviceState.status === "completed"
+        serviceState.status ===
+          "completed"
           ? "Subtitle pipeline completed."
-          : serviceState.status === "failed"
+          : serviceState.status ===
+            "failed"
             ? "Subtitle pipeline failed."
             : "Project status updated.",
       data: {
-        currentStep: project.currentStep,
+        currentStep:
+          project.currentStep,
 
-        currentStepName: project.currentStepName,
+        currentStepName:
+          project.currentStepName,
 
-        lastCompletedStep: project.lastCompletedStep,
+        lastCompletedStep:
+          project.lastCompletedStep,
 
-        language: project.pipeline?.language,
+        language:
+          project.pipeline
+            ?.language,
 
-        wordCount: project.pipeline?.wordCount,
+        wordCount:
+          project.pipeline
+            ?.wordCount,
 
-        subtitleCount: project.pipeline?.subtitleCount,
+        subtitleCount:
+          project.pipeline
+            ?.subtitleCount,
 
-        speakerCount: project.pipeline?.speakerCount,
+        speakerCount:
+          project.pipeline
+            ?.speakerCount,
       },
     });
   }
@@ -537,25 +820,37 @@ async function syncProjectStatus({ projectId, serviceState }) {
   return project;
 }
 
+
 // ============================================================
 // WEBHOOK EVENT HANDLER
 // ============================================================
 
-async function handleWebhook({ projectId, payload }) {
-  console.log(JSON.stringify(payload, null, 2));
+async function handleWebhook({
+  projectId,
+  payload,
+}) {
+  console.log(JSON.stringify(payload, null, 2))
   if (!payload) {
-    throw new Error("Webhook payload is required");
+    throw new Error(
+      "Webhook payload is required"
+    );
   }
 
-  const project = await Project.findOne({
-    projectId,
-  });
+  const project =
+    await Project.findOne({
+      projectId,
+    });
 
   if (!project) {
-    throw new Error(`Project not found: ${projectId}`);
+    throw new Error(
+      `Project not found: ${projectId}`
+    );
   }
 
-  const userId = project.userId.toString();
+  const userId =
+    project.userId.toString();
+
+  
 
   // ----------------------------------------------------------
   // Convert the FastAPI webhook payload
@@ -563,17 +858,24 @@ async function handleWebhook({ projectId, payload }) {
   // ----------------------------------------------------------
 
   const serviceState = {
-    project_id: payload.project_id || projectId,
+    project_id:
+      payload.project_id ||
+      projectId,
 
-    status: payload.status,
+    status:
+      payload.status,
 
-    current_step: payload.current_step,
+    current_step:
+      payload.current_step,
 
-    current_step_name: payload.current_step_name,
+    current_step_name:
+      payload.current_step_name,
 
-    last_completed_step: payload.last_completed_step,
+    last_completed_step:
+      payload.last_completed_step,
 
-    error: payload.error,
+    error:
+      payload.error,
 
     steps: {},
   };
@@ -588,16 +890,25 @@ async function handleWebhook({ projectId, payload }) {
   // ----------------------------------------------------------
 
   if (payload.step) {
-    serviceState.steps[String(payload.step.number)] = {
-      status: payload.step.status,
+    serviceState.steps[
+      String(
+        payload.step.number
+      )
+    ] = {
+      status:
+        payload.step.status,
 
-      started_at: payload.step.started_at,
+      started_at:
+        payload.step.started_at,
 
-      completed_at: payload.step.completed_at,
+      completed_at:
+        payload.step.completed_at,
 
-      error: payload.step.error,
+      error:
+        payload.step.error,
 
-      result: payload.step.result,
+      result:
+        payload.step.result,
     };
   }
 
@@ -605,10 +916,11 @@ async function handleWebhook({ projectId, payload }) {
   // Sync normal project state
   // ----------------------------------------------------------
 
-  const updatedProject = await syncProjectStatus({
-    projectId,
-    serviceState,
-  });
+  const updatedProject =
+    await syncProjectStatus({
+      projectId,
+      serviceState,
+    });
 
   // ----------------------------------------------------------
   // Save webhook-specific log information
@@ -618,33 +930,50 @@ async function handleWebhook({ projectId, payload }) {
   // Later move events to ProjectEvent collection.
   // ----------------------------------------------------------
 
-  const logMessage = payload.event
-    ? `Subtitle service webhook: ${payload.event}`
-    : "Subtitle service webhook received.";
+  const logMessage =
+    payload.event
+      ? `Subtitle service webhook: ${payload.event}`
+      : "Subtitle service webhook received.";
 
   updatedProject.logs.push({
-    timestamp: new Date(),
+    timestamp:
+      new Date(),
 
-    level: "info",
+    level:
+      "info",
 
-    message: logMessage,
+    message:
+      logMessage,
 
-    stepNumber: payload.step?.number || null,
+    stepNumber:
+      payload.step?.number ||
+      null,
 
-    stepName: payload.step?.name || null,
+    stepName:
+      payload.step?.name ||
+      null,
 
     metadata: {
-      event: payload.event,
+      event:
+        payload.event,
 
-      serviceStatus: payload.status,
+      serviceStatus:
+        payload.status,
 
-      currentStep: payload.current_step,
+      currentStep:
+        payload.current_step,
     },
   });
 
   // Keep the embedded log collection bounded.
-  if (updatedProject.logs.length > 1000) {
-    updatedProject.logs = updatedProject.logs.slice(-1000);
+  if (
+    updatedProject.logs.length >
+    1000
+  ) {
+    updatedProject.logs =
+      updatedProject.logs.slice(
+        -1000
+      );
   }
 
   await updatedProject.save();
@@ -658,47 +987,74 @@ async function handleWebhook({ projectId, payload }) {
   await emitProjectEvent({
     projectId,
     userId,
-    type: "subtitle_service_webhook",
-    status: payload.status || null,
-    stepNumber: payload.step?.number || null,
-    message: logMessage,
+    type:
+      "subtitle_service_webhook",
+    status:
+      payload.status ||
+      null,
+    stepNumber:
+      payload.step?.number ||
+      null,
+    message:
+      logMessage,
     data: {
-      event: payload.event,
+      event:
+        payload.event,
 
-      currentStep: payload.current_step,
+      currentStep:
+        payload.current_step,
 
-      currentStepName: payload.current_step_name,
+      currentStepName:
+        payload.current_step_name,
 
-      lastCompletedStep: payload.last_completed_step,
+      lastCompletedStep:
+        payload.last_completed_step,
 
-      step: payload.step || null,
+      step:
+        payload.step ||
+        null,
 
-      stepLogs: payload.step_logs || [],
+      stepLogs:
+        payload.step_logs ||
+        [],
 
-      logs: payload.logs_so_far || [],
+      logs:
+        payload.logs_so_far ||
+        [],
     },
   });
 
   return updatedProject;
 }
 
+
 // ============================================================
 // GET CURRENT SERVICE STATUS
 // ============================================================
 
-async function refreshProjectStatus(projectId) {
-  const project = await Project.findOne({
-    projectId,
-  });
+async function refreshProjectStatus(
+  projectId
+) {
+  const project =
+    await Project.findOne({
+      projectId,
+    });
 
   if (!project) {
-    throw new Error("Project not found");
+    throw new Error(
+      "Project not found"
+    );
   }
 
   const serviceProjectId =
-    project.subtitleService?.projectId || project.projectId;
+    project.subtitleService
+      ?.projectId ||
+    project.projectId;
 
-  const serviceState = await getSubtitleStatus(serviceProjectId);
+  const serviceState =
+    await getSubtitleStatus(
+      serviceProjectId
+    );
 
   return syncProjectStatus({
     projectId,
@@ -706,76 +1062,125 @@ async function refreshProjectStatus(projectId) {
   });
 }
 
+
 // ============================================================
 // GET SERVICE LOGS
 // ============================================================
 
-async function refreshProjectLogs(projectId, limit = 200) {
-  const project = await Project.findOne({
-    projectId,
-  });
+async function refreshProjectLogs(
+  projectId,
+  limit = 200
+) {
+  const project =
+    await Project.findOne({
+      projectId,
+    });
 
   if (!project) {
-    throw new Error("Project not found");
+    throw new Error(
+      "Project not found"
+    );
   }
 
   const serviceProjectId =
-    project.subtitleService?.projectId || project.projectId;
+    project.subtitleService
+      ?.projectId ||
+    project.projectId;
 
-  return getSubtitleLogs(serviceProjectId, limit);
+  return getSubtitleLogs(
+    serviceProjectId,
+    limit
+  );
 }
+
 
 // ============================================================
 // RESUME PROJECT
 // ============================================================
 
-async function resumeProject(projectId) {
-  const project = await Project.findOne({
-    projectId,
-  });
+async function resumeProject(
+  projectId
+) {
+  const project =
+    await Project.findOne({
+      projectId,
+    });
 
   if (!project) {
-    throw new Error("Project not found");
+    throw new Error(
+      "Project not found"
+    );
   }
 
-  if (project.status !== "failed") {
-    throw new Error("Only failed projects can be resumed");
+  if (
+    project.status !==
+    "failed"
+  ) {
+    throw new Error(
+      "Only failed projects can be resumed"
+    );
   }
 
   const serviceProjectId =
-    project.subtitleService?.projectId || project.projectId;
+    project.subtitleService
+      ?.projectId ||
+    project.projectId;
 
-  const result = await resumeSubtitleProject(serviceProjectId);
+  const result =
+    await resumeSubtitleProject(
+      serviceProjectId
+    );
 
-  project.status = "queued";
+  project.status =
+    "queued";
 
-  project.error = null;
+  project.error =
+    null;
 
-  if (project.failure) {
-    project.failure = null;
+  if (
+    project.failure
+  ) {
+    project.failure =
+      null;
   }
 
-  project.processing = project.processing || {};
+  project.processing =
+    project.processing ||
+    {};
 
-  project.processing.retryCount = (project.processing.retryCount || 0) + 1;
+  project.processing.retryCount =
+    (
+      project.processing
+        .retryCount || 0
+    ) + 1;
 
   await project.save();
 
   await emitProjectEvent({
     projectId,
-    userId: project.userId.toString(),
-    type: "pipeline_resumed",
-    status: "queued",
-    stepNumber: result.resumed_from_step || null,
-    message: result.message || "Pipeline resume requested.",
-    data: result,
+    userId:
+      project.userId.toString(),
+    type:
+      "pipeline_resumed",
+    status:
+      "queued",
+    stepNumber:
+      result.resumed_from_step ||
+      null,
+    message:
+      result.message ||
+      "Pipeline resume requested.",
+    data:
+      result,
   });
 
   return {
     project,
-    serviceResponse: result,
+    serviceResponse:
+      result,
   };
 }
+
 
 module.exports = {
   createProject,

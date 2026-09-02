@@ -1,0 +1,2299 @@
+Yes. For the mail layer, I would use **four pieces**:
+
+```text
+config/mail.js
+services/email.service.js
+controllers/auth.controller.js     ← add verification methods
+controllers/project.controller.js  ← completion notification trigger/queue later
+```
+
+For now, here is the complete mail implementation for **verification email + project completion email**, with secure token generation, hashed token storage, expiration, HTML + plaintext email, SMTP verification, and safe error handling.
+
+Nodemailer supports reusable SMTP transporters, `transporter.verify()` for checking connectivity/authentication, and separate `text`/`html` message bodies. ([Nodemailer][1])
+
+---
+
+# 1. Install Nodemailer
+
+```bash
+npm install nodemailer
+```
+
+---
+
+# 2. `.env`
+
+Add:
+
+```env
+# ============================================================
+# EMAIL / SMTP
+# ============================================================
+
+SMTP_HOST=smtp.example.com
+SMTP_PORT=587
+SMTP_SECURE=false
+SMTP_USER=your-smtp-username
+SMTP_PASS=your-smtp-password
+
+MAIL_FROM="Subtitle App <no-reply@example.com>"
+
+# Frontend
+FRONTEND_URL=https://your-frontend.com
+
+# Verification link validity
+EMAIL_VERIFICATION_EXPIRES_HOURS=24
+
+# Optional
+MAIL_REPLY_TO=support@example.com
+```
+
+For SMTP port `587`, `SMTP_SECURE=false` is normally appropriate and STARTTLS is used; port `465` is typically configured with `secure=true`. ([Nodemailer][1])
+
+Never commit `.env`.
+
+---
+
+# 3. `config/mail.js`
+
+This file should **only configure the mail transport**.
+
+Do not put application email logic here.
+
+```js
+"use strict";
+
+const nodemailer = require("nodemailer");
+
+
+// ============================================================
+// ENVIRONMENT
+// ============================================================
+
+const SMTP_HOST =
+  process.env.SMTP_HOST;
+
+const SMTP_PORT = Number(
+  process.env.SMTP_PORT || 587
+);
+
+const SMTP_SECURE =
+  String(
+    process.env.SMTP_SECURE || "false"
+  ).toLowerCase() === "true";
+
+const SMTP_USER =
+  process.env.SMTP_USER;
+
+const SMTP_PASS =
+  process.env.SMTP_PASS;
+
+const MAIL_FROM =
+  process.env.MAIL_FROM;
+
+const MAIL_REPLY_TO =
+  process.env.MAIL_REPLY_TO ||
+  undefined;
+
+
+// ============================================================
+// VALIDATION
+// ============================================================
+
+const requiredEnvironmentVariables = [
+  "SMTP_HOST",
+  "SMTP_USER",
+  "SMTP_PASS",
+  "MAIL_FROM",
+];
+
+for (
+  const variable
+  of requiredEnvironmentVariables
+) {
+  if (
+    !process.env[variable]
+  ) {
+    throw new Error(
+      `${variable} is required for email service`
+    );
+  }
+}
+
+
+// ============================================================
+// SMTP TRANSPORT
+// ============================================================
+//
+// One transporter is created and reused.
+//
+// Do NOT create a new transporter for every email.
+// Nodemailer supports connection pooling/reuse.
+// ============================================================
+
+const transporter =
+  nodemailer.createTransport({
+    host: SMTP_HOST,
+
+    port: SMTP_PORT,
+
+    secure: SMTP_SECURE,
+
+    auth: {
+      user: SMTP_USER,
+      pass: SMTP_PASS,
+    },
+
+    // --------------------------------------------------------
+    // Connection pooling
+    // --------------------------------------------------------
+
+    pool: true,
+
+    maxConnections: Number(
+      process.env.SMTP_MAX_CONNECTIONS ||
+        5
+    ),
+
+    maxMessages: Number(
+      process.env.SMTP_MAX_MESSAGES ||
+        100
+    ),
+
+    // --------------------------------------------------------
+    // Timeouts
+    // --------------------------------------------------------
+
+    connectionTimeout:
+      Number(
+        process.env.SMTP_CONNECTION_TIMEOUT ||
+          10000
+      ),
+
+    greetingTimeout:
+      Number(
+        process.env.SMTP_GREETING_TIMEOUT ||
+          10000
+      ),
+
+    socketTimeout:
+      Number(
+        process.env.SMTP_SOCKET_TIMEOUT ||
+          30000
+      ),
+
+    // --------------------------------------------------------
+    // Message defaults
+    // --------------------------------------------------------
+
+    defaults: {
+      from: MAIL_FROM,
+
+      ...(MAIL_REPLY_TO
+        ? {
+            replyTo:
+              MAIL_REPLY_TO,
+          }
+        : {}),
+    },
+  });
+
+
+// ============================================================
+// VERIFY SMTP
+// ============================================================
+
+const verifyMailConnection =
+  async () => {
+    try {
+      await transporter.verify();
+
+      console.log(
+        "[MAIL] SMTP connection verified successfully"
+      );
+
+      return true;
+    } catch (error) {
+      console.error(
+        "[MAIL] SMTP verification failed:",
+        error.message
+      );
+
+      return false;
+    }
+  };
+
+
+// ============================================================
+// EXPORT
+// ============================================================
+
+module.exports = {
+  transporter,
+  verifyMailConnection,
+};
+```
+
+The reusable transporter and `verify()` pattern are directly supported by Nodemailer. `verify()` checks DNS resolution, connection, TLS upgrade where applicable, and authentication without sending an email. ([Nodemailer][1])
+
+---
+
+# 4. `services/email.service.js`
+
+This is where the actual emails live.
+
+It supports:
+
+```text
+sendVerificationEmail()
+sendProjectCompletedEmail()
+sendProjectFailedEmail()
+```
+
+and gives both:
+
+```text
+HTML
++
+plain text
+```
+
+which is recommended because email clients may not support HTML identically. Nodemailer supports both `text` and `html` message fields. ([Nodemailer][2])
+
+```js
+"use strict";
+
+const crypto = require("crypto");
+
+const {
+  transporter,
+} = require("../config/mail");
+
+
+// ============================================================
+// CONFIG
+// ============================================================
+
+const FRONTEND_URL = (
+  process.env.FRONTEND_URL ||
+  "http://localhost:3000"
+).replace(/\/+$/, "");
+
+const EMAIL_VERIFICATION_EXPIRES_HOURS =
+  Number(
+    process.env.EMAIL_VERIFICATION_EXPIRES_HOURS ||
+      24
+  );
+
+
+// ============================================================
+// SECURITY HELPERS
+// ============================================================
+
+/**
+ * Generate a cryptographically secure random token.
+ *
+ * The raw token is only sent in the email.
+ * Its hash is stored in MongoDB.
+ */
+const generateVerificationToken =
+  () => {
+    return crypto.randomBytes(32).toString("hex");
+  };
+
+
+/**
+ * Hash the verification token before
+ * storing it in MongoDB.
+ */
+const hashVerificationToken =
+  (token) => {
+    return crypto
+      .createHash("sha256")
+      .update(token)
+      .digest("hex");
+  };
+
+
+// ============================================================
+// HTML ESCAPING
+// ============================================================
+//
+// User-controlled values must not be inserted directly
+// into HTML email templates.
+// ============================================================
+
+const escapeHtml = (
+  value
+) => {
+  return String(value ?? "")
+    .replace(
+      /&/g,
+      "&amp;"
+    )
+    .replace(
+      /</g,
+      "&lt;"
+    )
+    .replace(
+      />/g,
+      "&gt;"
+    )
+    .replace(
+      /"/g,
+      "&quot;"
+    )
+    .replace(
+      /'/g,
+      "&#039;"
+    );
+};
+
+
+// ============================================================
+// URL ESCAPING
+// ============================================================
+
+const normalizeUrl = (
+  value
+) => {
+  return String(value || "").trim();
+};
+
+
+// ============================================================
+// DATE FORMAT
+// ============================================================
+
+const formatDate =
+  (date) => {
+    if (!date) {
+      return "N/A";
+    }
+
+    return new Intl.DateTimeFormat(
+      "en-US",
+      {
+        dateStyle: "medium",
+        timeStyle: "short",
+      }
+    ).format(
+      new Date(date)
+    );
+  };
+
+
+// ============================================================
+// COMMON EMAIL LAYOUT
+// ============================================================
+
+const emailLayout = ({
+  preheader = "",
+  title,
+  content,
+  buttonText = null,
+  buttonUrl = null,
+  footerText =
+    "This email was sent automatically by Subtitle App.",
+}) => {
+  const safeTitle =
+    escapeHtml(title);
+
+  const safePreheader =
+    escapeHtml(preheader);
+
+  const buttonHtml =
+    buttonText &&
+    buttonUrl
+      ? `
+        <table
+          role="presentation"
+          cellpadding="0"
+          cellspacing="0"
+          border="0"
+          style="margin:28px 0;"
+        >
+          <tr>
+            <td
+              align="center"
+              style="
+                border-radius:8px;
+                background:#111827;
+              "
+            >
+              <a
+                href="${escapeHtml(buttonUrl)}"
+                target="_blank"
+                style="
+                  display:inline-block;
+                  padding:13px 22px;
+                  font-family:Arial,sans-serif;
+                  font-size:15px;
+                  font-weight:600;
+                  color:#ffffff;
+                  text-decoration:none;
+                  border-radius:8px;
+                "
+              >
+                ${escapeHtml(buttonText)}
+              </a>
+            </td>
+          </tr>
+        </table>
+      `
+      : "";
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  />
+  <title>${safeTitle}</title>
+</head>
+
+<body
+  style="
+    margin:0;
+    padding:0;
+    background:#f3f4f6;
+    font-family:Arial,Helvetica,sans-serif;
+  "
+>
+  <div
+    style="
+      display:none;
+      max-height:0;
+      overflow:hidden;
+      opacity:0;
+      color:transparent;
+    "
+  >
+    ${safePreheader}
+  </div>
+
+  <table
+    role="presentation"
+    width="100%"
+    cellpadding="0"
+    cellspacing="0"
+    border="0"
+  >
+    <tr>
+      <td
+        align="center"
+        style="padding:40px 16px;"
+      >
+
+        <table
+          role="presentation"
+          width="100%"
+          cellpadding="0"
+          cellspacing="0"
+          border="0"
+          style="
+            max-width:600px;
+            background:#ffffff;
+            border-radius:12px;
+            overflow:hidden;
+          "
+        >
+
+          <tr>
+            <td
+              style="
+                padding:26px 32px;
+                border-bottom:1px solid #e5e7eb;
+              "
+            >
+              <div
+                style="
+                  font-size:20px;
+                  font-weight:700;
+                  color:#111827;
+                "
+              >
+                Subtitle App
+              </div>
+            </td>
+          </tr>
+
+          <tr>
+            <td
+              style="
+                padding:36px 32px;
+                color:#374151;
+                font-size:15px;
+                line-height:1.7;
+              "
+            >
+
+              <h1
+                style="
+                  margin:0 0 20px;
+                  font-size:26px;
+                  line-height:1.3;
+                  color:#111827;
+                "
+              >
+                ${safeTitle}
+              </h1>
+
+              ${content}
+
+              ${buttonHtml}
+
+            </td>
+          </tr>
+
+          <tr>
+            <td
+              style="
+                padding:20px 32px;
+                background:#f9fafb;
+                color:#6b7280;
+                font-size:12px;
+                line-height:1.6;
+              "
+            >
+              ${escapeHtml(
+                footerText
+              )}
+            </td>
+          </tr>
+
+        </table>
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
+`;
+};
+
+
+// ============================================================
+// SEND EMAIL
+// ============================================================
+
+const sendEmail = async ({
+  to,
+  subject,
+  text,
+  html,
+  headers = {},
+}) => {
+  if (!to) {
+    throw new Error(
+      "Email recipient is required"
+    );
+  }
+
+  if (!subject) {
+    throw new Error(
+      "Email subject is required"
+    );
+  }
+
+  if (!text) {
+    throw new Error(
+      "Plain text email body is required"
+    );
+  }
+
+  if (!html) {
+    throw new Error(
+      "HTML email body is required"
+    );
+  }
+
+  try {
+    const info =
+      await transporter.sendMail({
+        to,
+        subject,
+        text,
+        html,
+
+        headers: {
+          ...headers,
+
+          "X-Application":
+            "Subtitle-App",
+        },
+      });
+
+    console.log(
+      `[MAIL] Sent "${subject}" to ${to} | messageId=${info.messageId}`
+    );
+
+    return {
+      success: true,
+      messageId:
+        info.messageId,
+      accepted:
+        info.accepted,
+      rejected:
+        info.rejected,
+      response:
+        info.response,
+    };
+  } catch (error) {
+    console.error(
+      `[MAIL] Failed "${subject}" to ${to}:`,
+      error.message
+    );
+
+    throw error;
+  }
+};
+
+
+// ============================================================
+// VERIFICATION TOKEN
+// ============================================================
+
+const createEmailVerificationToken =
+  () => {
+    const token =
+      generateVerificationToken();
+
+    const tokenHash =
+      hashVerificationToken(
+        token
+      );
+
+    const expiresAt =
+      new Date(
+        Date.now() +
+          EMAIL_VERIFICATION_EXPIRES_HOURS *
+            60 *
+            60 *
+            1000
+      );
+
+    return {
+      token,
+      tokenHash,
+      expiresAt,
+    };
+  };
+
+
+// ============================================================
+// VERIFICATION EMAIL
+// ============================================================
+
+const sendVerificationEmail =
+  async ({
+    name,
+    email,
+    token,
+  }) => {
+    if (!name) {
+      throw new Error(
+        "Name is required"
+      );
+    }
+
+    if (!email) {
+      throw new Error(
+        "Email is required"
+      );
+    }
+
+    if (!token) {
+      throw new Error(
+        "Verification token is required"
+      );
+    }
+
+    // --------------------------------------------------------
+    // IMPORTANT
+    //
+    // The raw token is placed only in the frontend URL.
+    // MongoDB stores only the hash.
+    // --------------------------------------------------------
+
+    const verificationUrl =
+      `${FRONTEND_URL}/verify-email?token=${encodeURIComponent(
+        token
+      )}`;
+
+    const safeName =
+      escapeHtml(name);
+
+    const safeEmail =
+      escapeHtml(email);
+
+    const expiresText =
+      `${EMAIL_VERIFICATION_EXPIRES_HOURS} hours`;
+
+    const subject =
+      "Verify your Subtitle App email address";
+
+    const text = `
+Hi ${name},
+
+Welcome to Subtitle App.
+
+Please verify your email address by opening this link:
+
+${verificationUrl}
+
+This verification link expires in ${expiresText}.
+
+If you did not create this account, you can safely ignore this email.
+
+Thanks,
+Subtitle App
+    `.trim();
+
+    const content = `
+      <p>
+        Hi ${safeName},
+      </p>
+
+      <p>
+        Welcome to <strong>Subtitle App</strong>.
+        Please verify that
+        <strong>${safeEmail}</strong>
+        belongs to you.
+      </p>
+
+      <p>
+        Click the button below to verify your email address.
+        This link expires in
+        <strong>${escapeHtml(
+          expiresText
+        )}</strong>.
+      </p>
+
+      <p
+        style="
+          font-size:13px;
+          color:#6b7280;
+          word-break:break-all;
+        "
+      >
+        If the button doesn't work, copy and paste this URL
+        into your browser:
+        <br />
+        ${escapeHtml(
+          verificationUrl
+        )}
+      </p>
+    `;
+
+    const html =
+      emailLayout({
+        preheader:
+          "Verify your email address to activate your Subtitle App account.",
+
+        title:
+          "Verify your email address",
+
+        content,
+
+        buttonText:
+          "Verify Email Address",
+
+        buttonUrl:
+          verificationUrl,
+      });
+
+    return sendEmail({
+      to: email,
+      subject,
+      text,
+      html,
+
+      headers: {
+        "X-Mail-Type":
+          "email-verification",
+      },
+    });
+  };
+
+
+// ============================================================
+// PROJECT COMPLETED EMAIL
+// ============================================================
+
+const sendProjectCompletedEmail =
+  async ({
+    name,
+    email,
+    project,
+  }) => {
+    if (!name) {
+      throw new Error(
+        "Name is required"
+      );
+    }
+
+    if (!email) {
+      throw new Error(
+        "Email is required"
+      );
+    }
+
+    if (!project) {
+      throw new Error(
+        "Project is required"
+      );
+    }
+
+    const projectId =
+      String(
+        project.projectId ||
+          ""
+      );
+
+    if (!projectId) {
+      throw new Error(
+        "Project ID is required"
+      );
+    }
+
+    const language =
+      project.subtitle
+        ?.language ||
+      project.pipeline
+        ?.language ||
+      "Unknown";
+
+    const languageName =
+      project.subtitle
+        ?.languageName ||
+      language;
+
+    const wordCount =
+      Number(
+        project.subtitle
+          ?.wordCount ||
+          project.pipeline
+            ?.wordCount ||
+          0
+      );
+
+    const subtitleCount =
+      Number(
+        project.subtitle
+          ?.subtitleCount ||
+          project.pipeline
+            ?.subtitleCount ||
+          0
+      );
+
+    const speakerCount =
+      Number(
+        project.pipeline
+          ?.speakerCount ||
+          0
+      );
+
+    const subtitleUrl =
+      normalizeUrl(
+        project.subtitle
+          ?.file?.url
+      );
+
+    const finalVideoUrl =
+      normalizeUrl(
+        project.output
+          ?.file?.url
+      );
+
+    const projectPageUrl =
+      `${FRONTEND_URL}/projects/${encodeURIComponent(
+        projectId
+      )}`;
+
+    const subject =
+      `Your subtitles are ready — ${projectId}`;
+
+    const text = `
+Hi ${name},
+
+Your subtitle project has completed successfully.
+
+Project ID: ${projectId}
+Language: ${languageName}
+Words: ${wordCount}
+Subtitles: ${subtitleCount}
+Speakers: ${speakerCount}
+
+Project:
+${projectPageUrl}
+
+${
+  finalVideoUrl
+    ? `Final video:
+${finalVideoUrl}`
+    : ""
+}
+
+${
+  subtitleUrl
+    ? `Subtitle file:
+${subtitleUrl}`
+    : ""
+}
+
+Thanks,
+Subtitle App
+    `.trim();
+
+    const videoButton =
+      finalVideoUrl
+        ? `
+          <a
+            href="${escapeHtml(
+              finalVideoUrl
+            )}"
+            target="_blank"
+            style="
+              display:inline-block;
+              margin-right:8px;
+              margin-bottom:8px;
+              padding:12px 18px;
+              background:#111827;
+              color:#ffffff;
+              text-decoration:none;
+              border-radius:7px;
+              font-weight:600;
+            "
+          >
+            Download Final Video
+          </a>
+        `
+        : "";
+
+    const subtitleButton =
+      subtitleUrl
+        ? `
+          <a
+            href="${escapeHtml(
+              subtitleUrl
+            )}"
+            target="_blank"
+            style="
+              display:inline-block;
+              margin-bottom:8px;
+              padding:12px 18px;
+              background:#ffffff;
+              color:#111827;
+              text-decoration:none;
+              border:1px solid #d1d5db;
+              border-radius:7px;
+              font-weight:600;
+            "
+          >
+            Download Subtitles
+          </a>
+        `
+        : "";
+
+    const content = `
+      <p>
+        Hi ${escapeHtml(name)},
+      </p>
+
+      <p>
+        Your subtitle project has completed successfully.
+        Your generated files are now ready.
+      </p>
+
+      <table
+        role="presentation"
+        width="100%"
+        cellpadding="0"
+        cellspacing="0"
+        style="
+          margin:24px 0;
+          border-collapse:collapse;
+        "
+      >
+        <tr>
+          <td
+            style="
+              padding:10px 0;
+              color:#6b7280;
+              width:40%;
+              border-bottom:1px solid #e5e7eb;
+            "
+          >
+            Project
+          </td>
+
+          <td
+            style="
+              padding:10px 0;
+              color:#111827;
+              font-weight:600;
+              border-bottom:1px solid #e5e7eb;
+            "
+          >
+            ${escapeHtml(
+              projectId
+            )}
+          </td>
+        </tr>
+
+        <tr>
+          <td
+            style="
+              padding:10px 0;
+              color:#6b7280;
+              border-bottom:1px solid #e5e7eb;
+            "
+          >
+            Language
+          </td>
+
+          <td
+            style="
+              padding:10px 0;
+              color:#111827;
+              font-weight:600;
+              border-bottom:1px solid #e5e7eb;
+            "
+          >
+            ${escapeHtml(
+              languageName
+            )}
+          </td>
+        </tr>
+
+        <tr>
+          <td
+            style="
+              padding:10px 0;
+              color:#6b7280;
+              border-bottom:1px solid #e5e7eb;
+            "
+          >
+            Words
+          </td>
+
+          <td
+            style="
+              padding:10px 0;
+              color:#111827;
+              font-weight:600;
+              border-bottom:1px solid #e5e7eb;
+            "
+          >
+            ${wordCount.toLocaleString(
+              "en-US"
+            )}
+          </td>
+        </tr>
+
+        <tr>
+          <td
+            style="
+              padding:10px 0;
+              color:#6b7280;
+              border-bottom:1px solid #e5e7eb;
+            "
+          >
+            Subtitles
+          </td>
+
+          <td
+            style="
+              padding:10px 0;
+              color:#111827;
+              font-weight:600;
+              border-bottom:1px solid #e5e7eb;
+            "
+          >
+            ${subtitleCount.toLocaleString(
+              "en-US"
+            )}
+          </td>
+        </tr>
+
+        <tr>
+          <td
+            style="
+              padding:10px 0;
+              color:#6b7280;
+            "
+          >
+            Speakers
+          </td>
+
+          <td
+            style="
+              padding:10px 0;
+              color:#111827;
+              font-weight:600;
+            "
+          >
+            ${speakerCount.toLocaleString(
+              "en-US"
+            )}
+          </td>
+        </tr>
+      </table>
+
+      <div style="margin-top:24px;">
+        ${videoButton}
+        ${subtitleButton}
+      </div>
+
+      <p
+        style="
+          margin-top:24px;
+          font-size:13px;
+          color:#6b7280;
+        "
+      >
+        You can also view the complete project from your
+        dashboard:
+        <br />
+        <a
+          href="${escapeHtml(
+            projectPageUrl
+          )}"
+          target="_blank"
+          style="
+            color:#2563eb;
+            word-break:break-all;
+          "
+        >
+          ${escapeHtml(
+            projectPageUrl
+          )}
+        </a>
+      </p>
+    `;
+
+    const html =
+      emailLayout({
+        preheader:
+          `Your subtitle project ${projectId} is complete.`,
+
+        title:
+          "Your project is ready",
+
+        content,
+      });
+
+    return sendEmail({
+      to: email,
+      subject,
+      text,
+      html,
+
+      headers: {
+        "X-Mail-Type":
+          "project-completed",
+      },
+    });
+  };
+
+
+// ============================================================
+// PROJECT FAILED EMAIL
+// ============================================================
+
+const sendProjectFailedEmail =
+  async ({
+    name,
+    email,
+    project,
+    errorMessage,
+  }) => {
+    const projectId =
+      String(
+        project?.projectId ||
+          ""
+      );
+
+    const safeError =
+      String(
+        errorMessage ||
+          "The subtitle processing pipeline failed."
+      );
+
+    const projectPageUrl =
+      `${FRONTEND_URL}/projects/${encodeURIComponent(
+        projectId
+      )}`;
+
+    const subject =
+      `Subtitle processing failed — ${projectId}`;
+
+    const text = `
+Hi ${name},
+
+Unfortunately, your subtitle project could not be completed.
+
+Project ID: ${projectId}
+
+Error:
+${safeError}
+
+You can open the project to review its status and retry it:
+
+${projectPageUrl}
+
+Thanks,
+Subtitle App
+    `.trim();
+
+    const content = `
+      <p>
+        Hi ${escapeHtml(name)},
+      </p>
+
+      <p>
+        Unfortunately, your subtitle project
+        <strong>${escapeHtml(
+          projectId
+        )}</strong>
+        could not be completed.
+      </p>
+
+      <div
+        style="
+          margin:20px 0;
+          padding:16px;
+          background:#fef2f2;
+          border:1px solid #fecaca;
+          border-radius:8px;
+          color:#991b1b;
+          word-break:break-word;
+        "
+      >
+        ${escapeHtml(
+          safeError
+        )}
+      </div>
+
+      <p>
+        Open your project to review the status
+        and try again.
+      </p>
+    `;
+
+    const html =
+      emailLayout({
+        preheader:
+          `There was a problem processing project ${projectId}.`,
+
+        title:
+          "Your project could not be completed",
+
+        content,
+
+        buttonText:
+          "Open Project",
+
+        buttonUrl:
+          projectPageUrl,
+      });
+
+    return sendEmail({
+      to: email,
+      subject,
+      text,
+      html,
+
+      headers: {
+        "X-Mail-Type":
+          "project-failed",
+      },
+    });
+  };
+
+
+// ============================================================
+// EXPORT
+// ============================================================
+
+module.exports = {
+  generateVerificationToken,
+  hashVerificationToken,
+  createEmailVerificationToken,
+  sendEmail,
+  sendVerificationEmail,
+  sendProjectCompletedEmail,
+  sendProjectFailedEmail,
+};
+```
+
+---
+
+# 5. Modify `User.js`
+
+Your user schema needs the verification data.
+
+Use:
+
+```js
+isEmailVerified: {
+  type: Boolean,
+  default: false,
+  index: true,
+},
+
+emailVerification: {
+  tokenHash: {
+    type: String,
+    default: null,
+    select: false,
+  },
+
+  expiresAt: {
+    type: Date,
+    default: null,
+    select: false,
+  },
+
+  verifiedAt: {
+    type: Date,
+    default: null,
+  },
+
+  lastSentAt: {
+    type: Date,
+    default: null,
+  },
+
+  sendCount: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+},
+```
+
+So you have:
+
+```text
+User
+ ├── email
+ ├── password
+ ├── isEmailVerified
+ └── emailVerification
+      ├── tokenHash
+      ├── expiresAt
+      ├── verifiedAt
+      ├── lastSentAt
+      └── sendCount
+```
+
+The important part is that the **raw token is never stored**.
+
+---
+
+# 6. Add verification generation to registration
+
+In your existing `register()` controller, after creating the user:
+
+```js
+const {
+  createEmailVerificationToken,
+  sendVerificationEmail,
+} = require("../services/email.service");
+```
+
+Then:
+
+```js
+const verification =
+  createEmailVerificationToken();
+
+user.emailVerification = {
+  tokenHash:
+    verification.tokenHash,
+
+  expiresAt:
+    verification.expiresAt,
+
+  verifiedAt: null,
+
+  lastSentAt:
+    new Date(),
+
+  sendCount: 1,
+};
+
+user.isEmailVerified =
+  false;
+
+await user.save();
+```
+
+Then send:
+
+```js
+await sendVerificationEmail({
+  name: user.name,
+  email: user.email,
+  token: verification.token,
+});
+```
+
+Your registration flow becomes:
+
+```text
+Create user
+     ↓
+Generate random token
+     ↓
+Hash token
+     ↓
+Save hash + expiration
+     ↓
+Send email
+     ↓
+Return response
+```
+
+---
+
+# 7. Important email-send failure handling
+
+Don't necessarily delete the user if SMTP temporarily fails.
+
+For example:
+
+```text
+User created ✅
+Verification data saved ✅
+SMTP failed ❌
+```
+
+The account can remain:
+
+```text
+isEmailVerified = false
+```
+
+and the user can use:
+
+```text
+POST /api/auth/resend-verification
+```
+
+to try again.
+
+This is much better than making SMTP availability part of database account creation.
+
+---
+
+# 8. `verifyEmail` controller
+
+Add this to `auth.controller.js`.
+
+```js
+const crypto = require("crypto");
+
+const User = require("../models/User");
+
+const {
+  hashVerificationToken,
+} = require("../services/email.service");
+
+
+// ============================================================
+// VERIFY EMAIL
+// ============================================================
+
+const verifyEmail = async (
+  req,
+  res
+) => {
+  try {
+    const {
+      token,
+    } = req.body;
+
+    if (
+      !token ||
+      typeof token !==
+        "string"
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Verification token is required",
+      });
+    }
+
+    const normalizedToken =
+      token.trim();
+
+    if (
+      normalizedToken.length <
+        20 ||
+      normalizedToken.length >
+        200
+    ) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid verification token",
+      });
+    }
+
+    // --------------------------------------------------------
+    // Hash supplied token
+    // --------------------------------------------------------
+
+    const tokenHash =
+      hashVerificationToken(
+        normalizedToken
+      );
+
+    // --------------------------------------------------------
+    // Find matching user
+    //
+    // tokenHash is select:false,
+    // so explicitly select it.
+    // --------------------------------------------------------
+
+    const user =
+      await User.findOne({
+        "emailVerification.tokenHash":
+          tokenHash,
+      }).select(
+        "+emailVerification.tokenHash +emailVerification.expiresAt"
+      );
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "Invalid or expired verification link",
+      });
+    }
+
+    // --------------------------------------------------------
+    // Already verified
+    // --------------------------------------------------------
+
+    if (
+      user.isEmailVerified
+    ) {
+      return res.status(200).json({
+        success: true,
+        message:
+          "Email address is already verified",
+      });
+    }
+
+    // --------------------------------------------------------
+    // Check expiration
+    // --------------------------------------------------------
+
+    if (
+      !user.emailVerification
+        ?.expiresAt ||
+      user.emailVerification
+        .expiresAt.getTime() <=
+        Date.now()
+    ) {
+      // Invalidate expired token.
+      user.emailVerification.tokenHash =
+        null;
+
+      user.emailVerification.expiresAt =
+        null;
+
+      await user.save();
+
+      return res.status(410).json({
+        success: false,
+        message:
+          "Verification link has expired. Please request a new one.",
+      });
+    }
+
+    // --------------------------------------------------------
+    // Verify
+    // --------------------------------------------------------
+
+    user.isEmailVerified =
+      true;
+
+    user.emailVerification
+      .verifiedAt =
+      new Date();
+
+    // Single-use token
+    user.emailVerification
+      .tokenHash =
+      null;
+
+    user.emailVerification
+      .expiresAt =
+      null;
+
+    await user.save();
+
+    return res.status(200).json({
+      success: true,
+      message:
+        "Email verified successfully",
+      data: {
+        isEmailVerified: true,
+      },
+    });
+  } catch (error) {
+    console.error(
+      "verifyEmail error:",
+      error
+    );
+
+    return res.status(500).json({
+      success: false,
+      message:
+        "Unable to verify email",
+    });
+  }
+};
+```
+
+---
+
+# 9. Resend verification controller
+
+This is equally important.
+
+```js
+const {
+  createEmailVerificationToken,
+  sendVerificationEmail,
+} = require("../services/email.service");
+
+
+// ============================================================
+// RESEND VERIFICATION
+// ============================================================
+
+const resendVerificationEmail =
+  async (
+    req,
+    res
+  ) => {
+    try {
+      const email =
+        String(
+          req.body.email ||
+            ""
+        )
+          .trim()
+          .toLowerCase();
+
+      if (!email) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Email is required",
+        });
+      }
+
+      // ------------------------------------------------------
+      // Find user
+      // ------------------------------------------------------
+
+      const user =
+        await User.findOne({
+          email,
+        }).select(
+          "+emailVerification.tokenHash +emailVerification.expiresAt"
+        );
+
+      // ------------------------------------------------------
+      // Do not expose whether an email exists.
+      //
+      // This prevents account enumeration.
+      // ------------------------------------------------------
+
+      if (!user) {
+        return res.status(200).json({
+          success: true,
+          message:
+            "If an account exists for this email, a verification email will be sent.",
+        });
+      }
+
+      // ------------------------------------------------------
+      // Already verified
+      // ------------------------------------------------------
+
+      if (
+        user.isEmailVerified
+      ) {
+        return res.status(200).json({
+          success: true,
+          message:
+            "Email address is already verified",
+        });
+      }
+
+      // ------------------------------------------------------
+      // Account disabled
+      // ------------------------------------------------------
+
+      if (
+        !user.isActive
+      ) {
+        return res.status(200).json({
+          success: true,
+          message:
+            "If an account exists for this email, a verification email will be sent.",
+        });
+      }
+
+      // ------------------------------------------------------
+      // Rate limit
+      // ------------------------------------------------------
+
+      const now =
+        Date.now();
+
+      const lastSent =
+        user.emailVerification
+          ?.lastSentAt
+          ? user.emailVerification
+              .lastSentAt
+              .getTime()
+          : 0;
+
+      const resendCooldown =
+        60 * 1000;
+
+      if (
+        lastSent &&
+        now - lastSent <
+          resendCooldown
+      ) {
+        return res.status(429).json({
+          success: false,
+          message:
+            "Please wait before requesting another verification email.",
+          retryAfterSeconds:
+            Math.ceil(
+              (
+                resendCooldown -
+                (
+                  now -
+                  lastSent
+                )
+              ) / 1000
+            ),
+        });
+      }
+
+      // ------------------------------------------------------
+      // Generate new token
+      // ------------------------------------------------------
+
+      const verification =
+        createEmailVerificationToken();
+
+      user.emailVerification = {
+        tokenHash:
+          verification.tokenHash,
+
+        expiresAt:
+          verification.expiresAt,
+
+        verifiedAt:
+          null,
+
+        lastSentAt:
+          new Date(),
+
+        sendCount:
+          (
+            user
+              .emailVerification
+              ?.sendCount ||
+            0
+          ) + 1,
+      };
+
+      await user.save();
+
+      // ------------------------------------------------------
+      // Send
+      // ------------------------------------------------------
+
+      try {
+        await sendVerificationEmail({
+          name:
+            user.name,
+
+          email:
+            user.email,
+
+          token:
+            verification.token,
+        });
+      } catch (error) {
+        console.error(
+          "Resend verification email failed:",
+          error
+        );
+
+        return res.status(202).json({
+          success: true,
+          message:
+            "Verification request accepted. Please try again shortly if the email does not arrive.",
+        });
+      }
+
+      return res.status(200).json({
+        success: true,
+        message:
+          "Verification email sent",
+      });
+    } catch (error) {
+      console.error(
+        "resendVerificationEmail error:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Unable to resend verification email",
+      });
+    }
+  };
+```
+
+---
+
+# 10. Add these to your auth route
+
+Your `auth.routes.js` becomes:
+
+```js
+const express = require("express");
+
+const {
+  register,
+  login,
+  refresh,
+  logout,
+  getMe,
+  logoutAll,
+  verifyEmail,
+  resendVerificationEmail,
+} = require("../controllers/auth.controller");
+
+const {
+  protect,
+} = require("../middleware/auth.middleware");
+
+const router =
+  express.Router();
+
+
+// ============================================================
+// PUBLIC
+// ============================================================
+
+router.post(
+  "/register",
+  register
+);
+
+router.post(
+  "/login",
+  login
+);
+
+router.post(
+  "/refresh",
+  refresh
+);
+
+router.post(
+  "/verify-email",
+  verifyEmail
+);
+
+router.post(
+  "/resend-verification",
+  resendVerificationEmail
+);
+
+
+// ============================================================
+// PROTECTED
+// ============================================================
+
+router.get(
+  "/me",
+  protect,
+  getMe
+);
+
+router.post(
+  "/logout",
+  protect,
+  logout
+);
+
+router.post(
+  "/logout-all",
+  protect,
+  logoutAll
+);
+
+
+module.exports =
+  router;
+```
+
+---
+
+# 11. Project-completion email
+
+This should **not** be called from the Step 5 webhook directly.
+
+Your real flow is:
+
+```text
+FastAPI Step 5 complete
+        ↓
+Node receives webhook
+        ↓
+Download SRT
+        ↓
+Upload SRT to Cloudinary
+        ↓
+If video:
+    FFmpeg
+        ↓
+Upload final video
+        ↓
+MongoDB:
+Project.status = completed
+        ↓
+Socket.IO:
+project:completed
+        ↓
+SEND COMPLETION EMAIL
+```
+
+The important point is that the user shouldn't get:
+
+> Your project is ready
+
+until the **final downloadable asset actually exists**.
+
+---
+
+# 12. Completion-email function
+
+Once your final Cloudinary uploads are saved to the project:
+
+```js
+const {
+  sendProjectCompletedEmail,
+} = require("../services/email.service");
+
+const User = require("../models/User");
+
+
+// Get the project owner
+const user =
+  await User.findById(
+    project.userId
+  ).lean();
+
+if (
+  user &&
+  user.isActive
+) {
+  try {
+    await sendProjectCompletedEmail({
+      name:
+        user.name,
+
+      email:
+        user.email,
+
+      project,
+    });
+  } catch (error) {
+    // IMPORTANT:
+    // Do NOT mark the project failed.
+    console.error(
+      "Completion email failed:",
+      error
+    );
+  }
+}
+```
+
+---
+
+# 13. Better production implementation
+
+Once you're using Redis/BullMQ, don't actually `await` the email directly in the output-finalization process.
+
+Use:
+
+```text
+Pipeline complete
+      ↓
+MongoDB complete
+      ↓
+Socket.IO
+      ↓
+Queue email job
+      ↓
+Email Worker
+      ↓
+Nodemailer
+```
+
+Then:
+
+```text
+SMTP down
+   ↓
+email retry
+   ↓
+project remains COMPLETED
+```
+
+This is the correct separation.
+
+---
+
+# 14. Add notification state to `Project`
+
+Your Project model should have:
+
+```js
+notifications: {
+  completionEmail: {
+    enabled: {
+      type: Boolean,
+      default: true,
+    },
+
+    status: {
+      type: String,
+      enum: [
+        "pending",
+        "sent",
+        "failed",
+        "not_required",
+      ],
+      default: "pending",
+    },
+
+    sentAt: {
+      type: Date,
+      default: null,
+    },
+
+    attempts: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+
+    lastError: {
+      type: String,
+      default: null,
+    },
+
+    messageId: {
+      type: String,
+      default: null,
+    },
+  },
+},
+```
+
+Now you can track:
+
+```text
+Project completed
+        ↓
+Email pending
+        ↓
+Email sent
+        ↓
+messageId = <SMTP message ID>
+```
+
+That's very useful when debugging customer complaints such as:
+
+> I didn't receive the completion email.
+
+---
+
+# 15. Verify mail on server startup
+
+In your `server.js`, after environment validation and before declaring the application fully ready:
+
+```js
+const {
+  verifyMailConnection,
+} = require("./config/mail");
+
+await verifyMailConnection();
+```
+
+You can choose whether an SMTP failure should block startup.
+
+For your application, I'd recommend:
+
+### Development
+
+Log the failure but allow server startup.
+
+### Production
+
+Still allow API startup if email is temporarily unavailable, but mark email subsystem unhealthy.
+
+For example:
+
+```text
+GET /health
+
+database: healthy
+email: unhealthy
+api: healthy
+```
+
+That means your application can still process projects while you fix the mail provider.
+
+---
+
+# 16. Your final mail folder structure
+
+```text
+backend/
+│
+├── config/
+│   ├── db.js
+│   ├── cloudinary.js
+│   └── mail.js
+│
+├── services/
+│   ├── cloudinary.service.js
+│   ├── subtitle.service.js
+│   ├── project.service.js
+│   ├── socket.service.js
+│   └── email.service.js
+│
+├── controllers/
+│   ├── auth.controller.js
+│   ├── user.controller.js
+│   ├── project.controller.js
+│   └── webhook.controller.js
+│
+├── routes/
+│   ├── auth.routes.js
+│   ├── user.routes.js
+│   ├── project.routes.js
+│   └── webhook.routes.js
+│
+└── models/
+    ├── User.js
+    └── Project.js
+```
+
+---
+
+# 17. Final flow for verification
+
+```text
+POST /api/auth/register
+        ↓
+User created
+        ↓
+Generate 32-byte random token
+        ↓
+SHA-256 token
+        ↓
+MongoDB stores hash
+        ↓
+Email contains raw token
+        ↓
+User clicks link
+        ↓
+Frontend /verify-email
+        ↓
+POST /api/auth/verify-email
+        ↓
+Hash token
+        ↓
+Find user
+        ↓
+Check expiration
+        ↓
+isEmailVerified = true
+        ↓
+Delete token hash
+        ↓
+Account verified
+```
+
+The token is single-use because the stored hash is cleared after successful verification.
+
+---
+
+# 18. Final flow for project completion
+
+```text
+FastAPI
+  ↓
+Step 001 ✓
+  ↓
+Step 002 ✓
+  ↓
+Step 003 ✓
+  ↓
+Step 004 ✓
+  ↓
+Step 005 ✓
+  ↓
+Node receives completion
+  ↓
+SRT download
+  ↓
+Cloudinary subtitle upload
+  ↓
+FFmpeg
+  ↓
+Cloudinary final video upload
+  ↓
+MongoDB COMPLETED
+  ↓
+Socket.IO project:completed
+  ↓
+Queue email
+  ↓
+Nodemailer
+  ↓
+User email
+```
+
+That gives you a clean separation between **authentication email**, **processing**, **realtime updates**, and **notification delivery**, without allowing an SMTP outage to corrupt the actual subtitle job state.
+
+[1]: https://nodemailer.com/smtp?utm_source=chatgpt.com "SMTP transport | Nodemailer"
+[2]: https://nodemailer.com/message?utm_source=chatgpt.com "Message configuration | Nodemailer"

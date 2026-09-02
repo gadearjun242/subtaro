@@ -1,28 +1,36 @@
-import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import {
-  ArrowRight,
-  PlayCircle,
-  Sparkles,
-  FileVideo2,
-  FileAudio2,
-  Captions,
-} from "lucide-react";
-import Button from "@/components/ui/Button";
-import { useAuth } from "@/context/AuthContext";
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { motion } from 'framer-motion'
+import { ArrowRight, PlayCircle, Sparkles, FileVideo2, Captions } from 'lucide-react'
+import Button from '@/components/ui/Button'
+import WaveformLottie from '@/components/landing/WaveformLottie'
+import { useAuth } from '@/context/AuthContext'
 
-const bars = [40, 70, 30, 90, 55, 75, 35, 60, 45, 85, 50, 65, 30, 95, 40];
+const CAPTION_WORDS = [
+  'Every',
+  'word',
+  'lands',
+  'exactly',
+  'when',
+  'it\u2019s',
+  'spoken.',
+]
 
 export default function Hero() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated } = useAuth()
+  const [wordCount, setWordCount] = useState(1)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setWordCount((prev) => (prev >= CAPTION_WORDS.length ? 1 : prev + 1))
+    }, 420)
+    return () => clearInterval(interval)
+  }, [])
 
   return (
     <section className="relative overflow-hidden bg-grid pb-20 pt-16 sm:pb-28 sm:pt-24">
       <div className="pointer-events-none absolute -top-40 left-1/2 h-[36rem] w-[36rem] -translate-x-1/2 animate-blob rounded-full bg-brand-400/20 blur-3xl dark:bg-brand-600/20" />
-      <div
-        className="pointer-events-none absolute right-0 top-40 h-72 w-72 animate-blob rounded-full bg-accent-400/20 blur-3xl"
-        style={{ animationDelay: "2s" }}
-      />
+      <div className="pointer-events-none absolute right-0 top-40 h-72 w-72 animate-blob rounded-full bg-accent-400/20 blur-3xl" style={{ animationDelay: '2s' }} />
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
@@ -52,8 +60,8 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="mx-auto mt-6 max-w-xl text-base text-slate-500 dark:text-slate-400 sm:text-lg"
           >
-            Upload a file, watch the pipeline run live, then download — or edit
-            — an accurate, speaker-aware subtitle file in minutes.
+            Upload a file, watch the pipeline run live, then download — or edit — an
+            accurate, speaker-aware subtitle file in minutes.
           </motion.p>
 
           <motion.div
@@ -62,9 +70,7 @@ export default function Hero() {
             transition={{ duration: 0.5, delay: 0.15 }}
             className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row"
           >
-            <Link
-              to={isAuthenticated ? "/dashboard/projects/new" : "/register"}
-            >
+            <Link to={isAuthenticated ? '/dashboard/projects/new' : '/register'}>
               <Button size="lg">
                 Start transcribing free <ArrowRight className="h-4 w-4" />
               </Button>
@@ -96,30 +102,40 @@ export default function Hero() {
 
             <div className="grid gap-4 p-4 sm:grid-cols-[1.3fr_1fr]">
               <div className="relative flex aspect-video items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800">
-                <div className="flex items-end gap-1">
-                  {bars.map((h, i) => (
-                    <span
-                      key={i}
-                      className="w-1.5 animate-wave rounded-full bg-gradient-to-t from-brand-500 to-accent-400"
-                      style={{
-                        height: `${h}%`,
-                        animationDelay: `${i * 0.06}s`,
+                <div className="absolute inset-0 bg-grid opacity-[0.15]" />
+                <WaveformLottie className="h-28 w-48 sm:h-36 sm:w-60" />
+
+                {/* Word-by-word synced caption reveal — an honest demo of the
+                    real playback-synced captions feature (see SyncedCaptions.jsx). */}
+                <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 flex-wrap items-center justify-center gap-1.5 px-4">
+                  {CAPTION_WORDS.map((word, i) => (
+                    <motion.span
+                      key={word}
+                      initial={false}
+                      animate={{
+                        opacity: i < wordCount ? 1 : 0,
+                        y: i < wordCount ? 0 : 6,
                       }}
-                    />
+                      transition={{ duration: 0.18 }}
+                      className="rounded bg-black/50 px-1.5 py-0.5 text-[11px] font-semibold text-white backdrop-blur sm:text-xs"
+                    >
+                      {word}
+                    </motion.span>
                   ))}
                 </div>
-                <span className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur">
-                  <Captions className="h-3 w-3" /> Generating subtitles…
+
+                <span className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-black/40 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur">
+                  <Captions className="h-3 w-3" /> Live sync
                 </span>
               </div>
 
               <div className="flex flex-col gap-2.5">
                 {[
-                  { name: "Audio separation", done: true },
-                  { name: "Speaker diarization", done: true },
-                  { name: "Segment preparation", done: true },
-                  { name: "Speaker-aware transcription", active: true },
-                  { name: "Subtitle generation", done: false },
+                  { name: 'Audio separation', done: true },
+                  { name: 'Speaker diarization', done: true },
+                  { name: 'Segment preparation', done: true },
+                  { name: 'Speaker-aware transcription', active: true },
+                  { name: 'Subtitle generation', done: false },
                 ].map((step) => (
                   <div
                     key={step.name}
@@ -128,15 +144,13 @@ export default function Hero() {
                     <span
                       className={
                         step.done
-                          ? "h-2 w-2 rounded-full bg-emerald-500"
+                          ? 'h-2 w-2 rounded-full bg-emerald-500'
                           : step.active
-                            ? "h-2 w-2 animate-pulse rounded-full bg-brand-500"
-                            : "h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600"
+                          ? 'h-2 w-2 animate-pulse rounded-full bg-brand-500'
+                          : 'h-2 w-2 rounded-full bg-slate-300 dark:bg-slate-600'
                       }
                     />
-                    <span className="text-slate-600 dark:text-slate-300">
-                      {step.name}
-                    </span>
+                    <span className="text-slate-600 dark:text-slate-300">{step.name}</span>
                   </div>
                 ))}
               </div>
@@ -145,5 +159,5 @@ export default function Hero() {
         </motion.div>
       </div>
     </section>
-  );
+  )
 }

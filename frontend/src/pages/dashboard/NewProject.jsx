@@ -19,7 +19,7 @@ export default function NewProject() {
   const [progress, setProgress] = useState(0)
   const [uploaded, setUploaded] = useState(null) // { file, inputType }
   const [name, setName] = useState('')
-  // Defaults to the selectable/MKV soft-subtitle track, per product preference.
+  // Defaults to the selectable soft-subtitle track, per product preference.
   const [subtitleMode, setSubtitleMode] = useState('selectable')
   const [subtitleStyle, setSubtitleStyle] = useState('classic')
 

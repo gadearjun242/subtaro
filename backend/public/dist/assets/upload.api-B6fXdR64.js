@@ -1,0 +1,1 @@
+import{t as e}from"./axios-BvnAhxWG.js";var t={uploadFile:(t,n)=>{let r=new FormData;return r.append(`file`,t),e.post(`/uploads`,r,{headers:{"Content-Type":`multipart/form-data`},onUploadProgress:e=>{n&&e.total&&n(Math.round(e.loaded/e.total*100))}}).then(e=>e.data)}};export{t};

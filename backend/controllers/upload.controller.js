@@ -178,7 +178,8 @@ const uploadProjectFile =
             format:
               cloudinaryFile.format,
 
-            originalFilename,
+            originalName:
+              originalFilename,
 
             sizeBytes:
               cloudinaryFile.bytes ||

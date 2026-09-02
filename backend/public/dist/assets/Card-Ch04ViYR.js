@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-Cx0BB4qO.js";import{t}from"./clsx-RXocPj9y.js";var n=e();function r({className:e,children:r,...i}){return(0,n.jsx)(`div`,{className:t(`rounded-2xl border border-slate-200/70 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900/60`,e),...i,children:r})}export{r as t};

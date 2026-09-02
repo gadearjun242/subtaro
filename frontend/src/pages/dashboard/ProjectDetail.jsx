@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import {
@@ -12,9 +12,12 @@ import {
   Wifi,
   WifiOff,
   Loader2,
-  Info,
   ListVideo,
   Flame,
+  MoreVertical,
+  Pencil,
+  Copy,
+  Trash2,
 } from 'lucide-react'
 import { userApi } from '@/api/user.api'
 import { projectApi } from '@/api/project.api'
@@ -27,6 +30,9 @@ import Card from '@/components/ui/Card'
 import Button from '@/components/ui/Button'
 import StatusBadge from '@/components/ui/StatusBadge'
 import { Skeleton } from '@/components/ui/Feedback'
+import Dropdown, { DropdownItem } from '@/components/ui/Dropdown'
+import Modal from '@/components/ui/Modal'
+import { Input, Label } from '@/components/ui/Input'
 import PipelineSteps from '@/components/dashboard/PipelineSteps'
 import SubtitlePanel from '@/components/dashboard/SubtitlePanel'
 import SyncedCaptions from '@/components/dashboard/SyncedCaptions'
@@ -43,15 +49,19 @@ const SUBTITLE_STYLE_LABELS = {
 
 const TABS = [
   { id: 'subtitle', label: 'Subtitle', icon: Captions },
-  // { id: 'logs', label: 'Logs', icon: ScrollText },
+  { id: 'logs', label: 'Logs', icon: ScrollText },
 ]
 
 export default function ProjectDetail() {
   const { projectId } = useParams()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const { connected } = useSocket()
   const [tab, setTab] = useState('subtitle')
   const [captionsVisible, setCaptionsVisible] = useState(true)
+  const [renameOpen, setRenameOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
+  const [nameDraft, setNameDraft] = useState('')
   const mediaRef = useRef(null)
 
   const query = useQuery({
@@ -77,22 +87,26 @@ export default function ProjectDetail() {
   })
 
   const cues = useMemo(() => parseSrt(subtitleTextQuery.data), [subtitleTextQuery.data])
-  const { currentTime } = useMediaTime(mediaRef)
-  const activeCue = useMemo(() => findActiveCue(cues, currentTime), [cues, currentTime])
 
   const hasOutputVideo = project?.output?.status === 'completed' && Boolean(project?.output?.file?.url)
-  const isMkvOutput =
-    hasOutputVideo &&
-    (project.output.mode === 'selectable' || project.output.file?.format?.toLowerCase() === 'mkv')
+  const isSelectableMode = hasOutputVideo && project?.output?.mode === 'selectable'
 
-  // Browsers can't play the .mkv container natively (confirmed even for
-  // fully-compatible H.264/AAC streams) - so when the output is an mkv we
-  // preview the original video instead, with a native <track> giving a
-  // real, browser-provided "select subtitle" toggle. The .mkv itself is
-  // offered as a download for VLC/mpv/smart TVs.
+  // Both delivery modes now produce a single, directly-playable .mp4
+  // (see BACKEND.md), so playback always uses the output once it's
+  // ready, falling back to the raw input before that.
+  const mediaSrc = project?.output?.file?.url || project?.input?.url
+  const { currentTime } = useMediaTime(mediaRef, mediaSrc)
+  const activeCue = useMemo(() => findActiveCue(cues, currentTime), [cues, currentTime])
+
+  // "selectable" mode's mov_text track isn't reliably exposed by
+  // browsers' native caption picker (a long-standing, inconsistent
+  // limitation across Chrome/Firefox/Safari, independent of this
+  // app) - so we still attach a client-side WebVTT <track> for a
+  // guaranteed in-page toggle. "embedded" mode needs nothing extra
+  // since captions are already burned into the pixels.
   const [vttUrl, setVttUrl] = useState(null)
   useEffect(() => {
-    if (!isMkvOutput || !subtitleTextQuery.data) {
+    if (!isSelectableMode || !subtitleTextQuery.data) {
       setVttUrl(null)
       return undefined
     }
@@ -100,14 +114,14 @@ export default function ProjectDetail() {
     const url = URL.createObjectURL(blob)
     setVttUrl(url)
     return () => URL.revokeObjectURL(url)
-  }, [isMkvOutput, subtitleTextQuery.data])
+  }, [isSelectableMode, subtitleTextQuery.data])
 
   const [downloadingVideo, setDownloadingVideo] = useState(false)
   const handleDownloadVideo = async () => {
     if (!project?.output?.file?.url) return
     setDownloadingVideo(true)
     try {
-      const ext = project.output.file.format || (isMkvOutput ? 'mkv' : 'mp4')
+      const ext = project.output.file.format || 'mp4'
       await downloadRemoteFile(project.output.file.url, `${project.name || 'video'}.${ext}`)
     } catch {
       toast.error('Download failed — opening the file instead')
@@ -139,6 +153,37 @@ export default function ProjectDetail() {
       queryClient.invalidateQueries({ queryKey: ['project', projectId] })
     },
     onError: (err) => toast.error(apiError(err, 'Unable to resume project')),
+  })
+
+  const renameMutation = useMutation({
+    mutationFn: () => projectApi.rename(project._id, nameDraft.trim()),
+    onSuccess: () => {
+      toast.success('Project renamed')
+      setRenameOpen(false)
+      queryClient.invalidateQueries({ queryKey: ['project', projectId] })
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+    },
+    onError: (err) => toast.error(apiError(err, 'Unable to rename project')),
+  })
+
+  const duplicateMutation = useMutation({
+    mutationFn: () => projectApi.duplicate(project._id),
+    onSuccess: (res) => {
+      toast.success('Project duplicated — processing started')
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      if (res?.data?.projectId) navigate(`/dashboard/projects/${res.data.projectId}`)
+    },
+    onError: (err) => toast.error(apiError(err, 'Unable to duplicate project')),
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: () => projectApi.remove(project._id),
+    onSuccess: () => {
+      toast.success('Project deleted')
+      queryClient.invalidateQueries({ queryKey: ['projects'] })
+      navigate('/dashboard/projects')
+    },
+    onError: (err) => toast.error(apiError(err, 'Unable to delete project')),
   })
 
   if (query.isLoading) {
@@ -209,6 +254,34 @@ export default function ProjectDetail() {
               <RotateCcw className="h-3.5 w-3.5" /> Resume
             </Button>
           )}
+          <Dropdown
+            align="right"
+            trigger={
+              <button className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">
+                <MoreVertical className="h-4 w-4" />
+              </button>
+            }
+          >
+            <DropdownItem
+              icon={Pencil}
+              onClick={() => {
+                setNameDraft(project.name)
+                setRenameOpen(true)
+              }}
+            >
+              Rename
+            </DropdownItem>
+            <DropdownItem icon={Copy} onClick={() => duplicateMutation.mutate()}>
+              {duplicateMutation.isPending ? 'Duplicating…' : 'Duplicate'}
+            </DropdownItem>
+            <DropdownItem
+              icon={Trash2}
+              onClick={() => setDeleteOpen(true)}
+              className="text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
+            >
+              Delete
+            </DropdownItem>
+          </Dropdown>
         </div>
       </div>
 
@@ -221,16 +294,16 @@ export default function ProjectDetail() {
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-slate-950/70 backdrop-blur-sm">
                   <Loader2 className="h-6 w-6 animate-spin text-brand-400" />
                   <p className="text-sm font-medium text-white">
-                    {project.output?.mode === 'selectable'
-                      ? 'Re-muxing the selectable subtitle track…'
+                    {project.subtitleMode === 'selectable'
+                      ? 'Adding the selectable subtitle track…'
                       : 'Re-rendering video with your edited subtitles…'}
                   </p>
                 </div>
               )}
               {isVideo ? (
-                (isMkvOutput ? project.input?.url : project.output?.file?.url || project.input?.url) ? (
+                mediaSrc ? (
                   <video
-                    key={isMkvOutput ? project.input?.url : project.output?.file?.url || project.input?.url}
+                    key={mediaSrc}
                     ref={mediaRef}
                     controls
                     playsInline
@@ -238,8 +311,8 @@ export default function ProjectDetail() {
                     className="h-full w-full"
                   >
                     <source
-                      src={isMkvOutput ? project.input?.url : project.output?.file?.url || project.input?.url}
-                      type={`video/${(isMkvOutput ? project.input?.format : project.output?.file?.format || project.input?.format || 'mp4').toLowerCase()}`}
+                      src={mediaSrc}
+                      type={`video/${(project.output?.file?.format || project.input?.format || 'mp4').toLowerCase()}`}
                     />
                     {vttUrl && <track kind="subtitles" src={vttUrl} srcLang="en" label="English" default />}
                     Your browser doesn't support embedded video playback.
@@ -259,22 +332,12 @@ export default function ProjectDetail() {
               )}
             </div>
 
-            {isMkvOutput && (
-              <div className="flex items-start gap-2.5 border-t border-slate-100 bg-amber-50/60 px-4 py-3 text-xs text-amber-700 dark:border-slate-800 dark:bg-amber-500/5 dark:text-amber-400">
-                <Info className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-                <p>
-                  This project uses a selectable subtitle track (.mkv), which browsers can't preview
-                  directly — playing your original video above with the caption toggle in the player
-                  controls (CC) instead. Download the .mkv below to use the real toggleable track in
-                  VLC, mpv, or a smart TV.
-                </p>
-              </div>
-            )}
-
             {/* Live captions synced to playback time - always for audio (no burned-in
-                captions possible there); for video, only while we're not already showing
-                a native <track> toggle or burned-in captions, so we never duplicate. */}
-            {!isMkvOutput && (!isVideo || !hasOutputVideo) && project.subtitle?.status === 'completed' && (
+                captions possible there); for video, only while there's no output yet
+                (still showing raw progress) - once the output exists, "embedded" mode
+                already shows captions burned in, and "selectable" mode has the native
+                <track> toggle above, so this would just duplicate either one. */}
+            {(!isVideo || !hasOutputVideo) && project.subtitle?.status === 'completed' && (
               <SyncedCaptions
                 cues={cues}
                 activeCue={activeCue}
@@ -288,9 +351,9 @@ export default function ProjectDetail() {
             {hasOutputVideo && project.output?.status !== 'processing' && (
               <div className="flex items-center justify-between gap-3 border-t border-slate-100 px-4 py-3 dark:border-slate-800">
                 <span className="flex items-center gap-1.5 text-xs font-medium text-slate-500 dark:text-slate-400">
-                  {isMkvOutput ? (
+                  {isSelectableMode ? (
                     <>
-                      <ListVideo className="h-3.5 w-3.5" /> Selectable subtitle track (.mkv)
+                      <ListVideo className="h-3.5 w-3.5" /> Selectable subtitle track (.mp4)
                     </>
                   ) : (
                     <>
@@ -360,7 +423,7 @@ export default function ProjectDetail() {
               {isVideo && (
                 <Row
                   label="Subtitle delivery"
-                  value={project.subtitleMode === 'selectable' ? 'Selectable track (.mkv)' : 'Burned-in'}
+                  value={project.subtitleMode === 'selectable' ? 'Selectable track (.mp4)' : 'Burned-in'}
                 />
               )}
               {isVideo && project.subtitleMode === 'embedded' && (
@@ -377,6 +440,55 @@ export default function ProjectDetail() {
           )}
         </div>
       </div>
+
+      <Modal
+        open={renameOpen}
+        onClose={() => setRenameOpen(false)}
+        title="Rename project"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setRenameOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              loading={renameMutation.isPending}
+              disabled={!nameDraft.trim()}
+              onClick={() => renameMutation.mutate()}
+            >
+              Save
+            </Button>
+          </>
+        }
+      >
+        <Label htmlFor="project-rename">Project name</Label>
+        <Input
+          id="project-rename"
+          value={nameDraft}
+          onChange={(e) => setNameDraft(e.target.value)}
+          maxLength={200}
+          autoFocus
+        />
+      </Modal>
+
+      <Modal
+        open={deleteOpen}
+        onClose={() => setDeleteOpen(false)}
+        title="Delete this project?"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setDeleteOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="danger" loading={deleteMutation.isPending} onClick={() => deleteMutation.mutate()}>
+              Delete
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          This permanently deletes <strong>{project.name}</strong> and its uploaded files. This can't be undone.
+        </p>
+      </Modal>
     </div>
   )
 }

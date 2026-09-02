@@ -1,11 +1,11 @@
-import { motion } from "framer-motion";
+import { motion } from 'framer-motion'
 
 const STATS = [
-  { value: "5-step", label: "Live-tracked pipeline" },
-  { value: "2", label: "Subtitle delivery modes" },
-  { value: "30 days", label: "Free trial, no card needed" },
-  { value: "Real-time", label: "Socket-powered updates" },
-];
+  { value: '5-step', label: 'Live-tracked pipeline' },
+  { value: '2', label: 'Subtitle delivery modes' },
+  { value: '30 days', label: 'Free trial, no card needed' },
+  { value: 'Real-time', label: 'Socket-powered updates' },
+]
 
 export default function StatsStrip() {
   return (
@@ -20,15 +20,11 @@ export default function StatsStrip() {
             transition={{ duration: 0.35, delay: i * 0.06 }}
             className="text-center"
           >
-            <p className="text-gradient text-3xl font-extrabold sm:text-4xl">
-              {stat.value}
-            </p>
-            <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">
-              {stat.label}
-            </p>
+            <p className="text-gradient text-3xl font-extrabold sm:text-4xl">{stat.value}</p>
+            <p className="mt-1 text-xs font-medium text-slate-500 dark:text-slate-400">{stat.label}</p>
           </motion.div>
         ))}
       </div>
     </section>
-  );
+  )
 }
