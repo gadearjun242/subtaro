@@ -117,7 +117,14 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-        // Allows images from any website, base64 data strings, and blob URLs
+
+        // 1. Allows downloading/fetching data (like your .srt files) from Cloudinary
+        "connect-src": ["'self'", "https://res.cloudinary.com"],
+
+        // 2. Allows video and audio elements to stream media (.mp4 files) from Cloudinary
+        "media-src": ["'self'", "https://res.cloudinary.com"],
+
+        // 3. Keeps your previous rule allowing images from any source
         "img-src": ["*", "data:", "blob:"],
       },
     },

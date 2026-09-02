@@ -5,7 +5,12 @@
 
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; img-src * data: blob:; script-src 'self'; style-src 'self';"
+      content="
+  default-src 'self'; 
+  connect-src 'self' https://cloudinary.com; 
+  media-src 'self' https://cloudinary.com; 
+  img-src * data: blob:;
+"
     />
 
     <!-- Favicon -->
