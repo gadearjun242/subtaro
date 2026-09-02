@@ -117,19 +117,17 @@ app.use(
     contentSecurityPolicy: {
       directives: {
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-
-        // 1. Allows downloading/fetching data (like your .srt files) from Cloudinary
+        
+        // ADD "blob:" HERE to allow local browser video streaming chunks
+        "media-src": ["'self'", "https://res.cloudinary.com", "blob:"],
+        
         "connect-src": ["'self'", "https://res.cloudinary.com"],
-
-        // 2. Allows video and audio elements to stream media (.mp4 files) from Cloudinary
-        "media-src": ["'self'", "https://res.cloudinary.com"],
-
-        // 3. Keeps your previous rule allowing images from any source
         "img-src": ["*", "data:", "blob:"],
       },
     },
-  }),
+  })
 );
+
 
 // ============================================================
 // CORS

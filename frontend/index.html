@@ -1,92 +1,69 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
 
-    <meta
-      http-equiv="Content-Security-Policy"
-      content="
+<head>
+  <meta charset="UTF-8" />
+
+  <meta http-equiv="Content-Security-Policy" content="
   default-src 'self'; 
-  connect-src 'self' https://cloudinary.com; 
-  media-src 'self' https://cloudinary.com; 
+  connect-src 'self' https://res.cloudinary.com; 
+  media-src 'self' https://res.cloudinary.com blob:; 
   img-src * data: blob:;
-"
-    />
+" />
 
-    <!-- Favicon -->
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 
-    <!-- Viewport -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Viewport -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Primary SEO -->
-    <title>Subtaro — AI Subtitles for Video &amp; Audio</title>
-    <meta
-      name="description"
-      content="Upload video or audio and get accurate, editable AI subtitles in minutes."
-    />
-    <meta
-      name="keywords"
-      content="AI subtitles, automatic subtitles, video subtitles, audio subtitles, subtitle generator, AI subtitle generator, video transcription, audio transcription, SRT subtitles, subtitle editor, Subtaro"
-    />
-    <meta name="author" content="Subtaro" />
-    <meta name="robots" content="index, follow" />
-    <meta name="theme-color" content="#6366F1" />
+  <!-- Primary SEO -->
+  <title>Subtaro — AI Subtitles for Video &amp; Audio</title>
+  <meta name="description" content="Upload video or audio and get accurate, editable AI subtitles in minutes." />
+  <meta name="keywords"
+    content="AI subtitles, automatic subtitles, video subtitles, audio subtitles, subtitle generator, AI subtitle generator, video transcription, audio transcription, SRT subtitles, subtitle editor, Subtaro" />
+  <meta name="author" content="Subtaro" />
+  <meta name="robots" content="index, follow" />
+  <meta name="theme-color" content="#6366F1" />
 
-    <!-- Canonical URL -->
-    <link rel="canonical" href="https://subtaro.onrender.com/" />
+  <!-- Canonical URL -->
+  <link rel="canonical" href="https://subtaro.onrender.com/" />
 
-    <!-- Open Graph / Facebook / LinkedIn -->
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="Subtaro" />
-    <meta
-      property="og:title"
-      content="Subtaro — AI Subtitles for Video &amp; Audio"
-    />
-    <meta
-      property="og:description"
-      content="Upload video or audio and get accurate, editable AI subtitles in minutes."
-    />
-    <meta property="og:url" content="https://subtaro.onrender.com/" />
-    <meta
-      property="og:image"
-      content="https://subtaro.onrender.com/og-image.png"
-    />
-    <meta property="og:image:alt" content="Subtaro — AI Subtitle Generator" />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
+  <!-- Open Graph / Facebook / LinkedIn -->
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Subtaro" />
+  <meta property="og:title" content="Subtaro — AI Subtitles for Video &amp; Audio" />
+  <meta property="og:description" content="Upload video or audio and get accurate, editable AI subtitles in minutes." />
+  <meta property="og:url" content="https://subtaro.onrender.com/" />
+  <meta property="og:image" content="https://subtaro.onrender.com/og-image.png" />
+  <meta property="og:image:alt" content="Subtaro — AI Subtitle Generator" />
+  <meta property="og:image:type" content="image/png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
 
-    <!-- Twitter / X -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta
-      name="twitter:title"
-      content="Subtaro — AI Subtitles for Video &amp; Audio"
-    />
-    <meta
-      name="twitter:description"
-      content="Upload video or audio and get accurate, editable AI subtitles in minutes."
-    />
-    <meta
-      name="twitter:image"
-      content="https://subtaro.onrender.com/og-image.png"
-    />
-    <meta name="twitter:image:alt" content="Subtaro — AI Subtitle Generator" />
+  <!-- Twitter / X -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Subtaro — AI Subtitles for Video &amp; Audio" />
+  <meta name="twitter:description"
+    content="Upload video or audio and get accurate, editable AI subtitles in minutes." />
+  <meta name="twitter:image" content="https://subtaro.onrender.com/og-image.png" />
+  <meta name="twitter:image:alt" content="Subtaro — AI Subtitle Generator" />
 
-    <!-- PWA / Browser -->
-    <meta name="application-name" content="Subtaro" />
-    <meta name="apple-mobile-web-app-title" content="Subtaro" />
-    <meta name="mobile-web-app-capable" content="yes" />
+  <!-- PWA / Browser -->
+  <meta name="application-name" content="Subtaro" />
+  <meta name="apple-mobile-web-app-title" content="Subtaro" />
+  <meta name="mobile-web-app-capable" content="yes" />
 
-    <!-- Preconnect -->
-    <link rel="preconnect" href="https://subtaro.onrender.com" />
+  <!-- Preconnect -->
+  <link rel="preconnect" href="https://subtaro.onrender.com" />
 
-    <title>Subtaro — AI Subtitles for Video &amp; Audio</title>
-  </head>
+  <title>Subtaro — AI Subtitles for Video &amp; Audio</title>
+</head>
 
-  <body>
-    <div id="root"></div>
+<body>
+  <div id="root"></div>
 
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+
 </html>
