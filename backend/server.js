@@ -113,7 +113,15 @@ app.disable("x-powered-by");
 app.set("trust proxy", 1);
 
 app.use(
-  helmet(),
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        // Allows images from any website, base64 data strings, and blob URLs
+        "img-src": ["*", "data:", "blob:"],
+      },
+    },
+  }),
 );
 
 // ============================================================
