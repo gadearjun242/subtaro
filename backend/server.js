@@ -114,17 +114,8 @@ app.set("trust proxy", 1);
 
 app.use(
   helmet({
-    contentSecurityPolicy: {
-      directives: {
-        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-        
-        // ADD "blob:" HERE to allow local browser video streaming chunks
-        "media-src": ["'self'", "https://res.cloudinary.com", "blob:"],
-        
-        "connect-src": ["'self'", "https://res.cloudinary.com"],
-        "img-src": ["*", "data:", "blob:"],
-      },
-    },
+    contentSecurityPolicy:
+      false,
   })
 );
 
