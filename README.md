@@ -15,7 +15,25 @@
 
 > **Repository deep dive:** This README is intentionally much more detailed than a typical project README. It documents the architecture, runtime flows, configuration, APIs, data model, security boundaries, asynchronous processing pipeline, deployment behavior, and a file-by-file reference for the repository.
 
-> **Analysis scope:** Every repository file was inspected **except `backend/public/**`**, which was explicitly excluded. The `frontend/public/**` assets are included in the documentation and are referenced above for the GitHub presentation image and favicon.
+> **Analysis scope:** Every repository file was inspected **except `backend/public/**`**, which was explicitly excluded. The `frontend/public/**` assets are included in the documentation and are referenced above for the GitHub presentation image, favicon, and demo videos.
+
+## Demo
+
+The repository includes a small before/after demo used by the public landing page. The same files are linked here so visitors can inspect the product result without running the application first.
+
+### Before
+
+<video src="./frontend/public/demo/before.mp4" controls muted playsinline width="100%"></video>
+
+[Open the before demo video](./frontend/public/demo/before.mp4)
+
+### After
+
+<video src="./frontend/public/demo/after.mp4" controls muted playsinline width="100%"></video>
+
+[Open the after demo video](./frontend/public/demo/after.mp4)
+
+> **GitHub rendering note:** GitHub's renderer can vary in how it handles repository-hosted HTML5 video. The direct links above are the reliable fallback when inline playback is not rendered.
 
 ---
 
