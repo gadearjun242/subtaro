@@ -16,12 +16,16 @@ export const projectApi = {
   // `subtitleMode` and `subtitleStyle` are optional — pass either to
   // switch delivery mode ("embedded"/"selectable") or, for embedded
   // mode, the burned-in caption style preset.
-  updateSubtitle: (mongoId, content, subtitleMode, subtitleStyle) =>
+  updateSubtitle: (mongoId, content, subtitleMode, subtitleStyle, subtitleCustom, cueStyles) =>
     api
       .patch(`/projects/${mongoId}/subtitle`, {
         content,
         ...(subtitleMode ? { subtitleMode } : {}),
         ...(subtitleStyle ? { subtitleStyle } : {}),
+        // object = custom style, null = back to the preset, undefined = unchanged
+        ...(subtitleCustom !== undefined ? { subtitleCustom } : {}),
+        // array aligned with the SRT cues = per-caption styles
+        ...(cueStyles !== undefined ? { cueStyles } : {}),
       })
       .then((r) => r.data),
 

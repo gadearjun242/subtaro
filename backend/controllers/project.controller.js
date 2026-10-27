@@ -1,5 +1,8 @@
 "use strict";
 
+const { deleteProjectAssets } = require("../services/cleanup.service");
+const { prepareBurnedSubtitle } = require("../services/ass.service");
+
 const mongoose = require("mongoose");
 const crypto = require("crypto");
 const fs = require("fs/promises");
@@ -36,6 +39,9 @@ const {
   DEFAULT_SUBTITLE_STYLE,
   isValidSubtitleStyle,
   getForceStyle,
+  getProjectForceStyle,
+  sanitizeCustomStyle,
+  sanitizeCueStyles,
 } = require("../services/subtitleStyle.presets");
 
 const {
@@ -304,6 +310,39 @@ const createProjectController =
           success: false,
           message:
             "input.publicId is required",
+        });
+      }
+
+      // --------------------------------------------------------
+      // Ownership: the asset must have been uploaded by THIS user
+      // through POST /api/upload (which always places files under
+      // their own folder) and must be served from our Cloudinary
+      // account. Without this, a client could submit any URL or
+      // another user's publicId.
+      // --------------------------------------------------------
+      const ownedPrefix = `subtitle-app/users/${userId}/uploads/`;
+      const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+
+      let inputHost = null;
+      try {
+        inputHost = new URL(input.url);
+      } catch {
+        inputHost = null;
+      }
+
+      if (
+        !input.publicId.startsWith(ownedPrefix) ||
+        input.publicId.includes("..") ||
+        !inputHost ||
+        inputHost.protocol !== "https:" ||
+        inputHost.hostname !== "res.cloudinary.com" ||
+        (cloudName && !inputHost.pathname.startsWith(`/${cloudName}/`)) ||
+        !decodeURIComponent(inputHost.pathname).includes(input.publicId)
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "input must reference a file you uploaded",
         });
       }
 
@@ -1286,11 +1325,13 @@ const regenerateOutputVideo = async ({ projectMongoId, subtitleContent }) => {
         outputVideoPath: finalVideoPath,
       });
     } else {
+      const burned = await prepareBurnedSubtitle(project, subtitlePath);
+
       await renderVideoWithSubtitles({
         inputVideoPath: sourceMediaPath,
-        subtitlePath,
+        subtitlePath: burned.subtitlePath,
         outputVideoPath: finalVideoPath,
-        forceStyle: getForceStyle(project.subtitleStyle),
+        forceStyle: burned.forceStyle,
       });
     }
 
@@ -1514,7 +1555,7 @@ const updateSubtitleController = async (req, res) => {
       });
     }
 
-    const { content, subtitleMode, subtitleStyle } = req.body;
+    const { content, subtitleMode, subtitleStyle, subtitleCustom, cueStyles } = req.body;
 
     if (typeof content !== "string" || content.trim().length === 0) {
       return res.status(400).json({
@@ -1682,6 +1723,54 @@ const updateSubtitleController = async (req, res) => {
     const styleChanged =
       subtitleStyle !== undefined && subtitleStyle !== previousSubtitleStyle;
 
+    // Custom style: object = set/replace, null = clear back to the preset.
+    let customChanged = false;
+
+    if (subtitleCustom !== undefined) {
+      const next = subtitleCustom === null ? null : sanitizeCustomStyle(subtitleCustom);
+
+      if (subtitleCustom !== null && !next) {
+        return res.status(400).json({ success: false, message: "subtitleCustom must be an object or null" });
+      }
+
+      if (JSON.stringify(next) !== JSON.stringify(project.subtitleCustom || null)) {
+        project.subtitleCustom = next;
+        project.markModified("subtitleCustom");
+        customChanged = true;
+
+        project.logs.push({
+          level: "info",
+          message: next ? "Custom subtitle style applied" : "Custom subtitle style cleared",
+          stepNumber: 5,
+          stepName: "original_subtitle_generation",
+          metadata: { event: "subtitle_custom_style_changed" },
+        });
+      }
+    }
+
+    // Per-caption styles: array = set/replace, null = clear.
+    if (cueStyles !== undefined) {
+      const next = cueStyles === null ? [] : sanitizeCueStyles(cueStyles);
+
+      if (!next) {
+        return res.status(400).json({ success: false, message: "cueStyles must be an array or null" });
+      }
+
+      if (JSON.stringify(next) !== JSON.stringify(project.subtitleCueStyles || [])) {
+        project.subtitleCueStyles = next;
+        project.markModified("subtitleCueStyles");
+        customChanged = true;
+
+        project.logs.push({
+          level: "info",
+          message: next.length ? "Per-caption styles applied" : "Per-caption styles cleared",
+          stepNumber: 5,
+          stepName: "original_subtitle_generation",
+          metadata: { event: "subtitle_cue_styles_changed", count: next.length },
+        });
+      }
+    }
+
     if (styleChanged) {
       project.subtitleStyle = subtitleStyle;
 
@@ -1707,7 +1796,7 @@ const updateSubtitleController = async (req, res) => {
       project.inputType === "video" &&
       (["completed", "failed"].includes(project.output?.status) ||
         modeChanged ||
-        (styleChanged && project.subtitleMode === "embedded"));
+        ((styleChanged || customChanged) && project.subtitleMode === "embedded"));
 
     if (shouldRegenerateOutput) {
       project.output.status = "processing";
@@ -1896,26 +1985,14 @@ const deleteProjectController =
       // smaller problem than an undeletable project).
       // --------------------------------------------------------
 
-      const filesToDelete = [
-        { file: project.input, defaultResourceType: "video" },
-        { file: project.subtitle?.file, defaultResourceType: "raw" },
-        { file: project.output?.file, defaultResourceType: "video" },
-      ].filter((entry) => entry.file?.publicId);
+      const cleanup = await deleteProjectAssets(project);
 
-      await Promise.all(
-        filesToDelete.map(async ({ file, defaultResourceType }) => {
-          try {
-            const shared = await isPublicIdReferencedElsewhere(file.publicId, project._id);
-            if (shared) return; // another project (e.g. a duplicate) still needs this file
-            await deleteFromCloudinary(file.publicId, file.resourceType || defaultResourceType);
-          } catch (error) {
-            console.error(
-              `Failed to delete Cloudinary file ${file.publicId} for project ${project.projectId}:`,
-              error.message
-            );
-          }
-        })
-      );
+      if (cleanup.errors.length) {
+        console.error(
+          `Cloudinary cleanup issues for project ${project.projectId}:`,
+          cleanup.errors
+        );
+      }
 
       await Project.deleteOne({
         _id: id,

@@ -5,6 +5,7 @@ const multer = require("multer");
 
 const {
   protect,
+  requireActiveSubscription,
 } = require(
   "../middleware/auth.middleware"
 );
@@ -37,6 +38,10 @@ const router =
 
 router.use(
   protect
+);
+
+router.use(
+  requireActiveSubscription
 );
 
 router.use(

@@ -246,6 +246,11 @@ export default function ProjectDetail() {
             {connected ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
             {connected ? 'Live' : 'Offline'}
           </span>
+          {hasOutputVideo && project.output?.status !== 'processing' && (
+            <Button size="sm" loading={downloadingVideo} onClick={handleDownloadVideo}>
+              <Download className="h-3.5 w-3.5" /> Download video
+            </Button>
+          )}
           <Button size="sm" variant="outline" loading={refreshMutation.isPending} onClick={() => refreshMutation.mutate()}>
             <RefreshCw className="h-3.5 w-3.5" /> Refresh
           </Button>
@@ -367,6 +372,54 @@ export default function ProjectDetail() {
               </div>
             )}
           </Card>
+
+          {project.subtitle?.status === 'completed' && (
+            <Link to={`/dashboard/projects/${projectId}/studio`} className="block">
+              <Card className="flex items-center justify-between gap-4 p-5 transition-colors hover:bg-slate-50 dark:hover:bg-white/[0.07] sm:p-6">
+                <div>
+                  <p className="text-base font-semibold text-slate-900 dark:text-white">Open the studio</p>
+                  <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
+                    Edit captions on a timeline, restyle them live, and re-render.
+                  </p>
+                </div>
+                <span className="flex h-10 shrink-0 items-center rounded-full bg-brand-600 px-5 text-sm font-medium text-white">
+                  Open
+                </span>
+              </Card>
+            </Link>
+          )}
+
+          {project.stems?.status === 'available' && (
+            <Card className="p-5 sm:p-6">
+              <p className="text-base font-semibold text-slate-900 dark:text-white">Separated audio</p>
+              <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">Vocals and instrumental, ready to download.</p>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {[
+                  ['Vocals', project.stems.vocal],
+                  ['Instrumental', project.stems.instrument],
+                ].map(([label, file]) =>
+                  file?.url ? (
+                    <div key={label} className="space-y-2 rounded-2xl bg-slate-50 p-3 dark:bg-white/[0.04]">
+                      <div className="flex items-center justify-between">
+                        <span className="text-sm font-medium">{label}</span>
+                        <button
+                          onClick={() =>
+                            downloadRemoteFile(file.url, `${project.name}-${label.toLowerCase()}.mp3`).catch(() =>
+                              window.open(file.url, '_blank', 'noreferrer')
+                            )
+                          }
+                          className="flex cursor-pointer items-center gap-1 text-xs font-medium text-brand-600 hover:underline dark:text-brand-400"
+                        >
+                          <Download className="h-3.5 w-3.5" /> MP3
+                        </button>
+                      </div>
+                      <audio controls preload="none" src={file.url} className="h-9 w-full" />
+                    </div>
+                  ) : null
+                )}
+              </div>
+            </Card>
+          )}
 
           <Card className="p-5 sm:p-6">
             <div className="flex gap-1 border-b border-slate-100 dark:border-slate-800">

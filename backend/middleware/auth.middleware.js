@@ -133,7 +133,27 @@ const optionalAuth = async (req, res, next) => {
   }
 };
 
+/**
+ * Blocks actions that consume resources (upload, create project,
+ * resume, regenerate) once the 10-day trial or paid plan has
+ * lapsed. Reading, downloading and deleting stay available so a
+ * lapsed user can always get their data out. Must run after
+ * `protect`.
+ */
+const requireActiveSubscription = (req, res, next) => {
+  if (req.user && typeof req.user.hasActiveAccess === "function" && req.user.hasActiveAccess()) {
+    return next();
+  }
+
+  return res.status(402).json({
+    success: false,
+    code: "SUBSCRIPTION_REQUIRED",
+    message: "Your free trial or plan has ended. Choose a plan to keep creating subtitles.",
+  });
+};
+
 module.exports = {
+  requireActiveSubscription,
   protect,
   optionalAuth,
 };

@@ -44,7 +44,7 @@ export default function ProjectsList() {
     <div className="space-y-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex flex-1 flex-col gap-3 sm:flex-row">
-          <div className="max-w-sm flex-1">
+          <div className="w-full flex-1 sm:max-w-sm">
             <Input
               icon={Search}
               placeholder="Search by name or project ID…"
@@ -61,7 +61,7 @@ export default function ProjectsList() {
               setStatus(e.target.value)
               setPage(1)
             }}
-            className="h-11 rounded-xl border border-slate-200 bg-white px-3.5 text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-brand-400/50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+            className="h-11 w-full cursor-pointer rounded-xl border border-slate-200 bg-slate-50 px-3.5 text-sm text-slate-700 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 dark:border-white/15 dark:bg-white/5 dark:text-slate-200 sm:w-auto"
           >
             {STATUS_OPTIONS.map((o) => (
               <option key={o.value} value={o.value}>
@@ -70,7 +70,7 @@ export default function ProjectsList() {
             ))}
           </select>
         </div>
-        <Link to="/dashboard/projects/new">
+        <Link to="/dashboard/projects/new" className="sm:shrink-0">
           <Button className="w-full sm:w-auto">
             <PlusCircle className="h-4 w-4" /> New project
           </Button>

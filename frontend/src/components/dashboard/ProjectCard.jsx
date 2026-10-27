@@ -68,17 +68,21 @@ export default function ProjectCard({ project }) {
 
   return (
     <>
-      <div className="group relative flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-4 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-200/60 dark:border-slate-800 dark:bg-slate-900 dark:hover:shadow-none sm:p-5">
-        <Link to={`/dashboard/projects/${project.projectId}`} className="flex min-w-0 flex-1 items-center gap-4">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 text-white">
+      <div className="group relative flex items-center gap-3 rounded-3xl border border-black/5 bg-white p-3.5 shadow-[0_1px_2px_rgb(0_0_0/0.04)] transition-all hover:-translate-y-0.5 hover:shadow-[0_12px_30px_-14px_rgb(0_0_0/0.18)] dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none sm:gap-4 sm:p-5">
+        <Link to={`/dashboard/projects/${project.projectId}`} className="flex min-w-0 flex-1 items-center gap-3 sm:gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-brand-600 dark:bg-white/10 dark:text-brand-400">
             {isVideo ? <FileVideo2 className="h-6 w-6" /> : <FileAudio2 className="h-6 w-6" />}
           </div>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-bold text-slate-900 dark:text-white">{project.name}</p>
-            <p className="mt-0.5 truncate text-xs text-slate-400">
-              {formatDate(project.createdAt)} · {formatBytes(project.input?.sizeBytes)} · {project.projectId}
+            <p className="break-words text-sm font-semibold text-slate-900 dark:text-white sm:truncate sm:text-base" title={project.name}>{project.name}</p>
+            <p className="mt-0.5 break-words text-xs text-slate-500 dark:text-slate-400 sm:truncate">
+              {formatDate(project.createdAt)} · {formatBytes(project.input?.sizeBytes)}
+              <span className="block break-all sm:inline"><span className="hidden sm:inline"> · </span>{project.projectId}</span>
             </p>
+            <div className="mt-2 sm:hidden">
+              <StatusBadge status={project.status} />
+            </div>
             {['processing', 'queued', 'uploading'].includes(project.status) && (
               <div className="mt-2 max-w-xs">
                 <ProgressBar value={progressPct} className="h-1.5" />
@@ -86,10 +90,10 @@ export default function ProjectCard({ project }) {
             )}
           </div>
 
-          <div className="hidden sm:block">
+          <div className="hidden shrink-0 sm:block">
             <StatusBadge status={project.status} />
           </div>
-          <ChevronRight className="hidden h-4 w-4 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5 dark:text-slate-600 sm:block" />
+          <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 transition-transform group-hover:translate-x-0.5 dark:text-slate-600" />
         </Link>
 
         <Dropdown
@@ -169,7 +173,7 @@ export default function ProjectCard({ project }) {
         }
       >
         <p className="text-sm text-slate-500 dark:text-slate-400">
-          This permanently deletes <strong>{project.name}</strong> and its uploaded files. This can't be undone.
+          This permanently deletes <strong>{project.name}</strong> and everything stored for it: the original upload, subtitles, rendered video and the separated vocal and instrumental audio. This can't be undone.
         </p>
       </Modal>
     </>

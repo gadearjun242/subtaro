@@ -15,6 +15,7 @@ import { useSidebar } from '@/context/SidebarContext'
 import { useAuth } from '@/context/AuthContext'
 import Avatar from '@/components/common/Avatar'
 import toast from 'react-hot-toast'
+import PlanCard from '@/components/dashboard/PlanCard'
 
 // "New Project" is intentionally NOT in this list — it gets its own
 // standout CTA button above the regular nav (see below).
@@ -52,14 +53,14 @@ export default function Sidebar() {
 
       <aside
         className={clsx(
-          'fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-slate-200 bg-white transition-all duration-200 dark:border-slate-800 dark:bg-slate-900',
+          'fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-black/5 bg-white transition-all duration-200 dark:border-white/10 dark:bg-[#0b0b0c]',
           collapsed ? 'lg:w-[76px]' : 'lg:w-64',
           'w-64',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
         {/* Top: logo */}
-        <div className="flex h-16 shrink-0 items-center justify-between border-b border-slate-100 px-4 dark:border-slate-800">
+        <div className="flex h-14 shrink-0 items-center justify-between px-4">
           <Logo showText={!collapsed} />
           <button
             onClick={toggleSidebar}
@@ -76,9 +77,9 @@ export default function Sidebar() {
             onClick={closeMobile}
             title={collapsed ? 'New Project' : undefined}
             className={clsx(
-              'flex cursor-pointer items-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-accent-500 px-3 py-2.5 text-sm font-bold text-white shadow-md shadow-brand-500/30 transition-all hover:shadow-lg hover:shadow-brand-500/40 hover:brightness-110 active:scale-[0.98]',
+              'flex cursor-pointer items-center gap-2 rounded-full bg-brand-600 px-3 py-2.5 text-sm font-medium text-white transition-all hover:bg-brand-700 active:scale-[0.98]',
               collapsed ? 'justify-center' : 'justify-center',
-              isNewProjectActive && 'ring-2 ring-brand-300 ring-offset-2 dark:ring-offset-slate-900'
+              isNewProjectActive && 'ring-2 ring-brand-300 ring-offset-2 dark:ring-offset-black'
             )}
           >
             <Plus className="h-[18px] w-[18px] shrink-0" strokeWidth={2.5} />
@@ -98,8 +99,8 @@ export default function Sidebar() {
                 clsx(
                   'flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/10 dark:text-brand-400'
-                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-slate-200'
+                    ? 'bg-slate-100 text-slate-900 dark:bg-white/10 dark:text-white'
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100'
                 )
               }
               title={collapsed ? label : undefined}
@@ -111,7 +112,8 @@ export default function Sidebar() {
         </nav>
 
         {/* Bottom: fixed theme + user + logout */}
-        <div className="shrink-0 space-y-1 border-t border-slate-100 p-3 dark:border-slate-800">
+        <div className="shrink-0 space-y-1 border-t border-black/5 p-3 dark:border-white/10">
+          {!collapsed && <PlanCard onNavigate={closeMobile} />}
           <div
             className={clsx(
               'flex items-center gap-3 rounded-xl px-2 py-2',

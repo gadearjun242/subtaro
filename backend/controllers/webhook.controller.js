@@ -7,6 +7,8 @@ const os = require("os");
 const path = require("path");
 
 const Project = require("../models/Project");
+const { syncProjectStems } = require("../services/stems.service");
+const { prepareBurnedSubtitle } = require("../services/ass.service");
 
 const {
   emitProjectEvent,
@@ -29,6 +31,7 @@ const {
 
 const {
   getForceStyle,
+  getProjectForceStyle,
 } = require("../services/subtitleStyle.presets");
 
 const {
@@ -1158,17 +1161,18 @@ async function finalizeProject({
 
       await project.save();
     } else {
+      const burned = await prepareBurnedSubtitle(project, subtitlePath);
+
       await renderVideoWithSubtitles({
         inputVideoPath:
           sourceMediaPath,
 
-        subtitlePath,
+        subtitlePath: burned.subtitlePath,
 
         outputVideoPath:
           renderedVideoPath,
 
-        forceStyle:
-          getForceStyle(project.subtitleStyle),
+        forceStyle: burned.forceStyle,
       });
     }
 
@@ -1376,6 +1380,12 @@ async function finalizeProject({
         output:
           project.output,
       },
+    });
+
+    // Vocal / instrumental stems: fire-and-forget so a slow or
+    // unsupported stem download never delays or fails the project.
+    syncProjectStems(project).catch((error) => {
+      console.error(`[STEMS] ${projectId}:`, error.message);
     });
 
     notifyProjectOutcome(project, "completed").catch((error) => {

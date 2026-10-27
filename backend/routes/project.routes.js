@@ -2,6 +2,7 @@ const express = require("express");
 
 const {
   protect,
+  requireActiveSubscription,
 } = require(
   "../middleware/auth.middleware"
 );
@@ -35,6 +36,7 @@ router.use(protect);
 
 router.post(
   "/",
+  requireActiveSubscription,
   createProjectController
 );
 
@@ -75,6 +77,7 @@ router.get(
 
 router.post(
   "/:projectId/resume",
+  requireActiveSubscription,
   resumeProjectController
 );
 
@@ -85,6 +88,7 @@ router.post(
 
 router.patch(
   "/:projectId/subtitle",
+  requireActiveSubscription,
   updateSubtitleController
 );
 
@@ -105,6 +109,7 @@ router.patch(
 
 router.post(
   "/:projectId/duplicate",
+  requireActiveSubscription,
   duplicateProjectController
 );
 

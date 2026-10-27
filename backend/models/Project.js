@@ -735,6 +735,60 @@ const projectSchema = new mongoose.Schema(
     },
 
 
+    // User-tuned style (font, size, colors, outline, position,
+    // background box). When set it takes precedence over the
+    // `subtitleStyle` preset. Always sanitized server-side - see
+    // sanitizeCustomStyle() in services/subtitleStyle.presets.js.
+    subtitleCustom: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+
+
+    // Per-caption styles, aligned with the SRT's cue order. Each
+    // entry is a complete style object (or null). When present the
+    // burned-in render uses these instead of subtitleStyle/Custom.
+    subtitleCueStyles: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: [],
+    },
+
+
+    // ========================================================
+    // STEMS (vocal / instrumental separation)
+    // ========================================================
+    //
+    // The subtitle pipeline's step 1 separates the source into
+    // vocal.wav and instrument.wav. When the service exposes
+    // them, they are copied into Cloudinary under the user's
+    // project folder so the user can download them, and they are
+    // deleted together with the project.
+    // ========================================================
+
+    stems: {
+      status: {
+        type: String,
+        enum: ["pending", "available", "unavailable", "failed"],
+        default: "pending",
+      },
+
+      vocal: {
+        type: fileSchema,
+        default: null,
+      },
+
+      instrument: {
+        type: fileSchema,
+        default: null,
+      },
+
+      checkedAt: {
+        type: Date,
+        default: null,
+      },
+    },
+
+
     // ========================================================
     // NOTIFICATIONS
     // ========================================================

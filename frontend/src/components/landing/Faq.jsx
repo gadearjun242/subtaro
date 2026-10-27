@@ -9,16 +9,24 @@ const FAQS = [
     a: 'Most common video formats (MP4, MOV, MKV, WEBM) and audio formats (MP3, WAV, FLAC, AAC, OGG) are supported.',
   },
   {
-    q: 'Can I edit the generated subtitles?',
-    a: 'Yes. Open any completed project, edit subtitle lines directly in the built-in editor, and save an updated file.',
+    q: 'How does the free trial work?',
+    a: 'Every new account gets 10 days of full access with no card required. When it ends you can still view, download and delete your projects, and choose a plan to keep creating.',
+  },
+  {
+    q: 'Can I style the burned-in captions?',
+    a: 'Yes. In the studio you can pick any font, size, color, outline, shadow and background box, and drag the captions anywhere on the video. The preview matches the final render.',
+  },
+  {
+    q: 'Do I get the vocals and instrumental separately?',
+    a: 'Yes. Each project separates the voice from the music, and both tracks are available to download as MP3 once processing finishes.',
+  },
+  {
+    q: 'What happens when I delete a project?',
+    a: 'Everything tied to it is permanently removed from storage: the original upload, subtitles, rendered video and separated audio.',
   },
   {
     q: `How does ${APP_NAME} detect different speakers?`,
-    a: 'A speaker diarization step runs before transcription, splitting audio into speaker-labelled segments so the transcription stage stays accurate per speaker.',
-  },
-  {
-    q: 'Do I get live progress updates while processing?',
-    a: 'Yes — the project detail page connects over a socket and updates each pipeline step in real time as it completes.',
+    a: 'A speaker diarization step runs before transcription, splitting audio into speaker-labelled segments so the transcription stays accurate per speaker.',
   },
 ]
 
@@ -27,7 +35,7 @@ export default function Faq() {
 
   return (
     <section id="faq" className="mx-auto max-w-3xl px-4 py-20 sm:px-6 lg:px-8">
-      <h2 className="text-center text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+      <h2 className="text-center text-4xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-5xl">
         Frequently asked questions
       </h2>
 

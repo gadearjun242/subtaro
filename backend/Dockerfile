@@ -14,6 +14,12 @@ RUN apt-get update && \
         ffmpeg \
         fontconfig \
         fonts-noto \
+        fonts-liberation \
+        fonts-dejavu-core \
+        fonts-roboto \
+        fonts-open-sans \
+        fonts-lato \
+        fonts-montserrat \
         ca-certificates && \
     fc-cache -f && \
     rm -rf /var/lib/apt/lists/*

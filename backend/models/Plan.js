@@ -25,7 +25,6 @@ const planSchema = new mongoose.Schema(
                 "quarterly",
                 "half_yearly",
                 "yearly",
-                "lifetime",
             ],
         },
 

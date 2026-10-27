@@ -1,26 +1,39 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Roboto:wght@400;700&family=Open+Sans:wght@400;700&family=Lato:wght@400;700&family=Montserrat:wght@400;700&family=Noto+Sans:wght@400;700&family=Noto+Serif:wght@400;700&display=swap');
 @import "tailwindcss";
 
 /* Enable class-based dark mode (".dark" ancestor) instead of OS preference */
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --font-sans: 'Plus Jakarta Sans', 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Inter', ui-sans-serif, system-ui, sans-serif;
 
-  --color-brand-50: #f1f0ff;
-  --color-brand-100: #e4e1fe;
-  --color-brand-200: #cbc5fd;
-  --color-brand-300: #ab9ffb;
-  --color-brand-400: #8b72f7;
-  --color-brand-500: #7548f0;
-  --color-brand-600: #6528e0;
-  --color-brand-700: #571dc3;
-  --color-brand-800: #481a9d;
-  --color-brand-900: #3c197d;
-  --color-brand-950: #240d54;
+  /* Neutral, Apple-style grays (replaces Tailwind's blue-tinted slate) */
+  --color-slate-50: #f5f5f7;
+  --color-slate-100: #ececf0;
+  --color-slate-200: #d9d9de;
+  --color-slate-300: #bcbcc2;
+  --color-slate-400: #8e8e93;
+  --color-slate-500: #6e6e73;
+  --color-slate-600: #515154;
+  --color-slate-700: #3a3a3c;
+  --color-slate-800: #2c2c2e;
+  --color-slate-900: #1d1d1f;
+  --color-slate-950: #000000;
 
-  --color-accent-400: #f472b6;
-  --color-accent-500: #ec4899;
+  --color-brand-50: #f0f7ff;
+  --color-brand-100: #e0efff;
+  --color-brand-200: #b8dcff;
+  --color-brand-300: #7ac0ff;
+  --color-brand-400: #3aa0ff;
+  --color-brand-500: #0a84ff;
+  --color-brand-600: #0071e3;
+  --color-brand-700: #0059b8;
+  --color-brand-800: #004690;
+  --color-brand-900: #003469;
+  --color-brand-950: #001f40;
+
+  --color-accent-400: #bf5af2;
+  --color-accent-500: #af52de;
 
   --animate-float: float 6s ease-in-out infinite;
   --animate-blob: blob 12s ease-in-out infinite;
@@ -51,7 +64,23 @@ html {
 }
 
 body {
-  @apply bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 font-sans antialiased;
+  @apply bg-white text-slate-900 dark:bg-black dark:text-slate-100 font-sans antialiased;
+  letter-spacing: -0.011em;
+  font-feature-settings: 'ss01', 'cv11';
+}
+
+h1, h2, h3 { letter-spacing: -0.03em; }
+
+/* Frosted glass surface used by headers and floating panels */
+.glass {
+  background: rgb(255 255 255 / 0.72);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+}
+.dark .glass { background: rgb(0 0 0 / 0.6); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
 
 ::selection {
@@ -83,5 +112,5 @@ body {
 }
 
 .text-gradient {
-  @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-500 via-brand-600 to-accent-500;
+  @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-500 via-brand-400 to-accent-500;
 }

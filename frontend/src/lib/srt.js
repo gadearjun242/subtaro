@@ -74,3 +74,42 @@ export function srtToVtt(srt) {
 
   return `WEBVTT\n\n${body.trim()}\n`
 }
+
+/** Seconds -> "HH:MM:SS,mmm" (SRT timestamp). */
+export function toSrtTime(seconds) {
+  const total = Math.max(0, Math.round(seconds * 1000))
+  const ms = total % 1000
+  const s = Math.floor(total / 1000) % 60
+  const m = Math.floor(total / 60000) % 60
+  const h = Math.floor(total / 3600000)
+  const pad = (n, l = 2) => String(n).padStart(l, '0')
+  return `${pad(h)}:${pad(m)}:${pad(s)},${pad(ms, 3)}`
+}
+
+/** Serialises cues back to SRT text (re-indexed from 1). */
+export function cuesToSrt(cues) {
+  return (
+    [...cues]
+      .sort((a, b) => a.start - b.start)
+      .filter((c) => c.text.trim() && c.end > c.start)
+      .map((c, i) => `${i + 1}\n${toSrtTime(c.start)} --> ${toSrtTime(c.end)}\n${c.text.trim()}`)
+      .join('\n\n') + '\n'
+  )
+}
+
+/** Display timecode "m:ss.mmm". */
+export function formatTimecode(seconds) {
+  const t = Math.max(0, seconds || 0)
+  const m = Math.floor(t / 60)
+  const s = (t % 60).toFixed(3).padStart(6, '0')
+  return `${m}:${s}`
+}
+
+/** Parses "83.4", "1:23.4" or "1:23,400" into seconds; null if invalid. */
+export function parseTimecode(value) {
+  const v = String(value).trim().replace(',', '.')
+  if (!v) return null
+  const parts = v.split(':')
+  if (parts.length > 3 || parts.some((p) => p === '' || Number.isNaN(Number(p)))) return null
+  return parts.reduce((acc, p) => acc * 60 + Number(p), 0)
+}

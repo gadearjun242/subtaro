@@ -24,6 +24,7 @@ const projectRoutes = require("./routes/project.routes");
 const webhookRoutes = require("./routes/webhook.routes");
 const uploadRoutes = require("./routes/upload.routes");
 const planRoutes = require("./routes/plan.routes");
+const paymentRoutes = require("./routes/payment.routes");
 const contactRoutes = require("./routes/contact.routes");
 
 const { ensurePlansSeeded } = require("./services/plan.service");
@@ -112,10 +113,41 @@ app.disable("x-powered-by");
 
 app.set("trust proxy", 1);
 
+// Content-Security-Policy. Everything the app legitimately loads is
+// listed here (Cloudinary media, Google Fonts, Razorpay checkout,
+// Socket.IO). Set CSP_REPORT_ONLY=true to log violations in the
+// browser console without blocking while debugging a new origin.
 app.use(
   helmet({
-    contentSecurityPolicy:
-      false,
+    contentSecurityPolicy: {
+      useDefaults: false,
+      reportOnly: process.env.CSP_REPORT_ONLY === "true",
+      directives: {
+        defaultSrc: ["'self'"],
+        scriptSrc: ["'self'", "https://checkout.razorpay.com"],
+        styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+        fontSrc: ["'self'", "data:", "https://fonts.gstatic.com"],
+        imgSrc: ["'self'", "data:", "blob:", "https://res.cloudinary.com"],
+        mediaSrc: ["'self'", "blob:", "https://res.cloudinary.com"],
+        connectSrc: [
+          "'self'",
+          "ws:",
+          "wss:",
+          "https://res.cloudinary.com",
+          "https://api.razorpay.com",
+          "https://lumberjack.razorpay.com",
+        ],
+        frameSrc: ["https://api.razorpay.com", "https://checkout.razorpay.com"],
+        workerSrc: ["'self'", "blob:"],
+        objectSrc: ["'none'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
+        frameAncestors: ["'self'"],
+      },
+    },
+    // Razorpay's checkout popup needs to talk back to the opener.
+    crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+    crossOriginResourcePolicy: { policy: "cross-origin" },
   })
 );
 
@@ -302,6 +334,7 @@ app.use("/api/webhooks", webhookRoutes);
 app.use("/api/uploads", uploadRoutes);
 
 app.use("/api/plans", planRoutes);
+app.use("/api/payments", paymentRoutes);
 
 app.use("/api/contact", contactRoutes);
 

@@ -18,15 +18,15 @@ const PLAN_CATALOG = [
         key: "free_trial",
         name: "Free Trial",
         description: "Try everything, no card required.",
-        durationDays: 30,
+        durationDays: 10,
         isLifetime: false,
         price: 0,
-        currency: "USD",
+        currency: "INR",
         badge: null,
         isDefault: true,
         sortOrder: 0,
         features: [
-            "30 days full access",
+            "10 days full access",
             "Unlimited video & audio uploads",
             "Speaker-aware transcription",
             "Editable subtitles",
@@ -39,8 +39,8 @@ const PLAN_CATALOG = [
         description: "Flexible, cancel any time.",
         durationDays: 30,
         isLifetime: false,
-        price: 9,
-        currency: "USD",
+        price: 299,
+        currency: "INR",
         badge: null,
         isDefault: false,
         sortOrder: 1,
@@ -57,8 +57,8 @@ const PLAN_CATALOG = [
         description: "A quarter of savings.",
         durationDays: 90,
         isLifetime: false,
-        price: 24,
-        currency: "USD",
+        price: 799,
+        currency: "INR",
         badge: "Save 11%",
         isDefault: false,
         sortOrder: 2,
@@ -74,9 +74,9 @@ const PLAN_CATALOG = [
         description: "Half a year, better value.",
         durationDays: 180,
         isLifetime: false,
-        price: 45,
-        currency: "USD",
-        badge: "Save 17%",
+        price: 1499,
+        currency: "INR",
+        badge: "Save 16%",
         isDefault: false,
         sortOrder: 3,
         features: [
@@ -91,8 +91,8 @@ const PLAN_CATALOG = [
         description: "Our best recurring value.",
         durationDays: 365,
         isLifetime: false,
-        price: 79,
-        currency: "USD",
+        price: 2699,
+        currency: "INR",
         badge: "Most popular",
         isDefault: false,
         sortOrder: 4,
@@ -100,23 +100,6 @@ const PLAN_CATALOG = [
             "Everything in 6 Months",
             "Dedicated support channel",
             "2 months free vs. monthly",
-        ],
-    },
-    {
-        key: "lifetime",
-        name: "Lifetime",
-        description: "Pay once, use it forever.",
-        durationDays: null,
-        isLifetime: true,
-        price: 199,
-        currency: "USD",
-        badge: "Best value",
-        isDefault: false,
-        sortOrder: 5,
-        features: [
-            "Everything in 12 Months",
-            "One-time payment, no renewals",
-            "Lifetime updates",
         ],
     },
 ];
@@ -135,6 +118,13 @@ const ensurePlansSeeded = async () => {
     }));
 
     await Plan.bulkWrite(operations);
+
+    // Retired plans (lifetime was removed) must disappear from the
+    // pricing page; existing holders keep their subscription window.
+    await Plan.updateMany(
+        { key: { $nin: PLAN_CATALOG.map((p) => p.key) } },
+        { $set: { isActive: false } }
+    );
 };
 
 // ============================================================

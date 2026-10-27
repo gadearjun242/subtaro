@@ -35,21 +35,21 @@ export default function Overview() {
     <div className="space-y-8">
       <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
         <div>
-          <h2 className="text-xl font-extrabold text-slate-900 dark:text-white">
-            Welcome back, {user?.name?.split(' ')[0]} 👋
+          <h2 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+            Welcome back, {user?.name?.split(' ')[0]}.
           </h2>
-          <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+          <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 sm:text-base">
             Here's what's happening with your subtitle projects.
           </p>
         </div>
-        <Link to="/dashboard/projects/new">
-          <Button>
+        <Link to="/dashboard/projects/new" className="sm:shrink-0">
+          <Button className="w-full sm:w-auto">
             <PlusCircle className="h-4 w-4" /> New project
           </Button>
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <StatCard
           icon={FolderKanban}
           label="Total projects"
@@ -82,9 +82,9 @@ export default function Overview() {
         />
       </div>
 
-      <Card className="p-5 sm:p-6">
-        <div className="flex items-center justify-between">
-          <h3 className="text-base font-bold text-slate-900 dark:text-white">Recent projects</h3>
+      <Card className="p-3 sm:p-6">
+        <div className="flex flex-wrap items-center px-1 sm:px-0 justify-between gap-2">
+          <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Recent projects</h3>
           <Link
             to="/dashboard/projects"
             className="flex items-center gap-1 text-sm font-semibold text-brand-600 hover:underline dark:text-brand-400"

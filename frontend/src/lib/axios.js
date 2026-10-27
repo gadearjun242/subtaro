@@ -70,6 +70,10 @@ api.interceptors.response.use(
       }
     }
 
+    if (status === 402 && error.response?.data?.code === 'SUBSCRIPTION_REQUIRED') {
+      window.dispatchEvent(new CustomEvent('subscription:required'))
+    }
+
     return Promise.reject(error)
   }
 )

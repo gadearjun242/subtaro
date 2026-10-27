@@ -1,18 +1,51 @@
-import { useQuery } from '@tanstack/react-query'
+import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { Check, Sparkles, ExternalLink, Info } from 'lucide-react'
-import { planApi, subscriptionApi } from '@/api/plan.api'
+import { Check, ExternalLink } from 'lucide-react'
+import toast from 'react-hot-toast'
+import { planApi, subscriptionApi, paymentApi } from '@/api/plan.api'
 import { useAuth } from '@/context/AuthContext'
 import Button from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Feedback'
 import { PORTFOLIO_URL } from '@/lib/config'
 
+const formatPrice = (amount, currency = 'INR') =>
+  new Intl.NumberFormat('en-IN', { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount)
+
+const CYCLE_LABEL = {
+  monthly: 'month',
+  quarterly: '3 months',
+  half_yearly: '6 months',
+  yearly: 'year',
+}
+
+// Razorpay's checkout script is only loaded when someone actually pays.
+const loadCheckout = () =>
+  new Promise((resolve, reject) => {
+    if (window.Razorpay) return resolve()
+    const script = document.createElement('script')
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+    script.onload = resolve
+    script.onerror = () => reject(new Error('Could not load the payment window'))
+    document.body.appendChild(script)
+  })
+
 export default function Pricing() {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, user } = useAuth()
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
+  const [payingKey, setPayingKey] = useState(null)
 
   const plansQuery = useQuery({
     queryKey: ['plans'],
     queryFn: () => planApi.list().then((r) => r.data.plans),
+  })
+
+  const configQuery = useQuery({
+    queryKey: ['payment-config'],
+    queryFn: () => paymentApi.config().then((r) => r.data),
+    staleTime: 5 * 60 * 1000,
   })
 
   const subscriptionQuery = useQuery({
@@ -21,96 +54,153 @@ export default function Pricing() {
     enabled: isAuthenticated,
   })
 
+  const config = configQuery.data
+  const paymentsEnabled = Boolean(config?.enabled)
+  const portfolioUrl = config?.portfolioUrl || PORTFOLIO_URL
   const currentPlanKey = subscriptionQuery.data?.subscription?.planKey
+  const subscription = subscriptionQuery.data?.subscription
 
-  // Payments aren't wired up in this build — clicking any plan takes
-  // visitors to my portfolio instead of faking a purchase.
-  const handleChoose = () => {
-    window.open(PORTFOLIO_URL, '_blank', 'noreferrer')
+  const handleChoose = async (plan) => {
+    if (!paymentsEnabled) {
+      window.open(portfolioUrl, '_blank', 'noreferrer')
+      return
+    }
+
+    if (!isAuthenticated) {
+      navigate('/register')
+      return
+    }
+
+    setPayingKey(plan.key)
+
+    try {
+      await loadCheckout()
+      const { data: order } = await paymentApi.createOrder(plan.key)
+
+      const checkout = new window.Razorpay({
+        key: order.keyId,
+        order_id: order.orderId,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'Subtaro',
+        description: `${order.plan.name} plan`,
+        prefill: { name: user?.name, email: user?.email },
+        theme: { color: '#0071e3' },
+        handler: async (response) => {
+          try {
+            await paymentApi.verify({
+              orderId: response.razorpay_order_id,
+              paymentId: response.razorpay_payment_id,
+              signature: response.razorpay_signature,
+            })
+            await queryClient.invalidateQueries({ queryKey: ['subscription'] })
+            toast.success('Payment successful. Your plan is active.')
+            navigate('/dashboard')
+          } catch {
+            toast.error('Payment could not be verified. If you were charged, contact support.')
+          } finally {
+            setPayingKey(null)
+          }
+        },
+        modal: { ondismiss: () => setPayingKey(null) },
+      })
+
+      checkout.open()
+    } catch (error) {
+      toast.error(error?.response?.data?.message || error.message || 'Unable to start checkout')
+      setPayingKey(null)
+    }
   }
 
+  const paidPlans = plansQuery.data?.filter((p) => p.price > 0) ?? []
+
   return (
-    <div className="bg-grid">
-      <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-2xl text-center">
-          <span className="mx-auto inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-3.5 py-1.5 text-xs font-semibold text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400">
-            <Sparkles className="h-3.5 w-3.5" /> Simple, transparent pricing
-          </span>
-          <h1 className="mt-6 text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-5xl">
-            Start free. <span className="text-gradient">Upgrade any time.</span>
+    <div>
+      <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+        <div className="mx-auto max-w-3xl text-center">
+          <h1 className="text-5xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-6xl">
+            Start free.
+            <br />
+            <span className="text-gradient">Stay for the details.</span>
           </h1>
-          <p className="mx-auto mt-4 max-w-lg text-slate-500 dark:text-slate-400">
-            Every account starts with a full-featured 30-day free trial — no card required.
-            Pick a plan below whenever you're ready for more.
+          <p className="mx-auto mt-5 max-w-xl text-lg text-slate-500 dark:text-slate-400">
+            Every account includes a full 10-day free trial. No card required. Pick a plan
+            when you are ready to keep going.
           </p>
+
+          {subscription?.status === 'trialing' && subscription.daysRemaining != null && (
+            <p className="mt-5 inline-block rounded-full bg-brand-50 px-4 py-1.5 text-sm font-medium text-brand-700 dark:bg-brand-500/15 dark:text-brand-300">
+              {subscription.daysRemaining} {subscription.daysRemaining === 1 ? 'day' : 'days'} left in your trial
+            </p>
+          )}
         </div>
 
         {plansQuery.isLoading ? (
-          <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
+          <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
               <Skeleton key={i} className="h-96 w-full rounded-3xl" />
             ))}
           </div>
         ) : (
-          <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {plansQuery.data?.map((plan, i) => {
-              const isCurrent = currentPlanKey === plan.key
+          <div className="mt-16 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {paidPlans.map((plan, i) => {
+              const isCurrent = currentPlanKey === plan.key && subscription?.status === 'active'
               const isPopular = plan.badge === 'Most popular'
-              const isLifetime = plan.isLifetime
 
               return (
                 <motion.div
                   key={plan.key}
-                  initial={{ opacity: 0, y: 16 }}
+                  initial={{ opacity: 0, y: 18 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: '-40px' }}
-                  transition={{ duration: 0.4, delay: (i % 3) * 0.06 }}
-                  className={`relative flex flex-col rounded-3xl border p-6 transition-all hover:-translate-y-1 ${
-                    isPopular || isLifetime
-                      ? 'border-brand-300 bg-white shadow-xl shadow-brand-200/40 dark:border-brand-500/40 dark:bg-slate-900 dark:shadow-none'
-                      : 'border-slate-200 bg-white hover:shadow-lg hover:shadow-slate-200/60 dark:border-slate-800 dark:bg-slate-900 dark:hover:shadow-none'
+                  transition={{ duration: 0.5, delay: i * 0.06 }}
+                  className={`relative flex flex-col rounded-3xl p-7 ${
+                    isPopular
+                      ? 'bg-black text-white dark:bg-white dark:text-black'
+                      : 'border border-black/5 bg-slate-50 text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-white'
                   }`}
                 >
                   {plan.badge && (
-                    <span
-                      className={`absolute -top-3 left-6 rounded-full px-3 py-1 text-[11px] font-bold text-white shadow-md ${
-                        isLifetime ? 'bg-gradient-to-r from-accent-500 to-brand-600' : 'bg-brand-600'
-                      }`}
-                    >
+                    <span className="absolute right-5 top-5 rounded-full bg-brand-600 px-2.5 py-1 text-[11px] font-semibold text-white">
                       {plan.badge}
                     </span>
                   )}
 
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">{plan.name}</h3>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{plan.description}</p>
+                  <h3 className="text-lg font-semibold">{plan.name}</h3>
+                  <p className="mt-1 text-sm opacity-60">{plan.description}</p>
 
-                  <div className="mt-5 flex items-baseline gap-1">
-                    <span className="text-4xl font-extrabold text-slate-900 dark:text-white">
-                      {plan.price === 0 ? 'Free' : `$${plan.price}`}
+                  <div className="mt-6 flex items-baseline gap-1.5">
+                    <span className="text-4xl font-semibold tracking-tight">
+                      {formatPrice(plan.price, plan.currency)}
                     </span>
-                    {plan.price > 0 && (
-                      <span className="text-sm font-medium text-slate-400">
-                        {isLifetime ? 'once' : `/ ${plan.name.toLowerCase()}`}
-                      </span>
-                    )}
+                    <span className="text-sm opacity-60">/ {CYCLE_LABEL[plan.key] || 'cycle'}</span>
                   </div>
 
-                  <ul className="mt-6 flex-1 space-y-2.5">
+                  <ul className="mt-7 flex-1 space-y-3">
                     {plan.features?.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-300">
-                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-500" />
+                      <li key={feature} className="flex items-start gap-2.5 text-sm opacity-80">
+                        <Check className="mt-0.5 h-4 w-4 shrink-0 text-brand-500" />
                         {feature}
                       </li>
                     ))}
                   </ul>
 
                   <Button
-                    className="mt-7 w-full"
-                    variant={isPopular || isLifetime ? 'primary' : 'outline'}
+                    className="mt-8 w-full"
+                    variant={isPopular ? 'primary' : 'secondary'}
                     disabled={isCurrent}
-                    onClick={handleChoose}
+                    loading={payingKey === plan.key}
+                    onClick={() => handleChoose(plan)}
                   >
-                    {isCurrent ? 'Current plan' : 'Choose plan'} <ExternalLink className="h-3.5 w-3.5" />
+                    {isCurrent
+                      ? 'Current plan'
+                      : paymentsEnabled
+                        ? 'Buy now'
+                        : (
+                          <>
+                            Choose plan <ExternalLink className="h-3.5 w-3.5" />
+                          </>
+                        )}
                   </Button>
                 </motion.div>
               )
@@ -118,13 +208,20 @@ export default function Pricing() {
           </div>
         )}
 
-        <div className="mx-auto mt-10 flex max-w-lg items-start gap-2.5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
-          <Info className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>
-            This is a portfolio/demo project — payment processing isn't wired up, so choosing a
-            plan links out to my portfolio instead.
+        {!paymentsEnabled && (
+          <p className="mx-auto mt-10 max-w-lg text-center text-sm text-slate-500 dark:text-slate-400">
+            Online checkout is coming soon. Choosing a plan opens my{' '}
+            <a
+              href={portfolioUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="font-medium text-brand-600 hover:underline dark:text-brand-400"
+            >
+              portfolio
+            </a>
+            , where you can reach me to get your plan activated.
           </p>
-        </div>
+        )}
       </div>
     </div>
   )

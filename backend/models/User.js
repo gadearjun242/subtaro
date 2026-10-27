@@ -116,7 +116,6 @@ const userSchema = new mongoose.Schema(
                     "quarterly",
                     "half_yearly",
                     "yearly",
-                    "lifetime",
                 ],
                 default: "free_trial",
             },
@@ -135,7 +134,7 @@ const userSchema = new mongoose.Schema(
             // null for the lifetime plan (never expires)
             expiresAt: {
                 type: Date,
-                default: () => new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                default: () => new Date(Date.now() + 10 * 24 * 60 * 60 * 1000),
             },
 
             isLifetime: {

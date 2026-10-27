@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { Menu, X, ArrowRight } from 'lucide-react'
 import Logo from '@/components/common/Logo'
 import ThemeToggle from '@/components/common/ThemeToggle'
@@ -8,7 +8,6 @@ import { useAuth } from '@/context/AuthContext'
 
 const LINKS = [
   { to: '/#features', label: 'Features' },
-  { to: '/#how-it-works', label: 'How it works' },
   { to: '/pricing', label: 'Pricing' },
   { to: '/#faq', label: 'FAQ' },
 ]
@@ -18,8 +17,8 @@ export default function PublicHeader() {
   const { isAuthenticated } = useAuth()
 
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/80 backdrop-blur-md dark:border-slate-800/70 dark:bg-slate-950/80">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="glass sticky top-0 z-50 border-b border-black/5 dark:border-white/10">
+      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Logo />
 
         <nav className="hidden items-center gap-8 md:flex">
@@ -27,7 +26,7 @@ export default function PublicHeader() {
             <a
               key={l.to}
               href={l.to}
-              className="text-sm font-medium text-slate-600 transition-colors hover:text-brand-600 dark:text-slate-300 dark:hover:text-brand-400"
+              className="text-[13px] font-normal text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
             >
               {l.label}
             </a>

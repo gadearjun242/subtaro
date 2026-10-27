@@ -2,10 +2,10 @@ const bcrypt = require("bcryptjs");
 
 const User = require("../models/User");
 const Project = require("../models/Project");
+const { deleteUserAssets } = require("../services/cleanup.service");
 
 const {
   getPlanByKey,
-  computeSubscriptionWindow,
 } = require("../services/plan.service");
 
 // ============================================================
@@ -1300,6 +1300,15 @@ const deleteAccount = async (req, res) => {
     // Cloudinary service.
     // --------------------------------------------------------
 
+    // Remove EVERY Cloudinary asset the user owns (uploads, subtitle
+    // files, rendered videos, vocal/instrumental stems) before the
+    // records that reference them disappear.
+    const cleanup = await deleteUserAssets(userId);
+
+    if (cleanup.errors?.length) {
+      console.error("Cloudinary cleanup issues for account", String(userId), cleanup.errors);
+    }
+
     await User.findByIdAndDelete(
       userId
     );
@@ -1436,84 +1445,16 @@ const getMySubscription = async (req, res) => {
 };
 
 /**
- * POST /api/users/me/subscription/activate
- *
- * Body: { "planKey": "monthly" }
- *
- * ⚠️ PLACEHOLDER - no payment gateway is wired in yet. This
- * immediately activates the requested plan with no charge, so
- * the frontend pricing/upgrade flow has something real to call.
- * Before shipping, gate this behind an actual payment provider
- * (Stripe/Razorpay/etc.) confirming payment first - see
- * BACKEND.md for the exact TODO.
+ * POST /api/users/me/subscription/activate - closed (410). Use /api/payments.
  */
 const activateSubscription = async (req, res) => {
-  try {
-    const { planKey } = req.body;
-
-    if (!planKey) {
-      return res.status(400).json({
-        success: false,
-        message: "planKey is required",
-      });
-    }
-
-    const plan = await getPlanByKey(planKey);
-
-    if (!plan || !plan.isActive) {
-      return res.status(404).json({
-        success: false,
-        message: "Plan not found",
-      });
-    }
-
-    const user = await User.findById(req.user._id);
-
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: "User not found",
-      });
-    }
-
-    const { startedAt, expiresAt, isLifetime } = computeSubscriptionWindow(plan);
-
-    user.subscription = {
-      planKey: plan.key,
-      status: plan.key === "free_trial" ? "trialing" : "active",
-      startedAt,
-      expiresAt,
-      isLifetime,
-      lastPayment:
-        plan.price > 0
-          ? {
-              amount: plan.price,
-              currency: plan.currency,
-              provider: "manual", // TODO: replace once a real gateway is wired in
-              reference: null,
-              paidAt: startedAt,
-            }
-          : user.subscription?.lastPayment || null,
-    };
-
-    await user.save();
-
-    return res.status(200).json({
-      success: true,
-      message: `Plan updated to ${plan.name}`,
-      data: {
-        subscription: sanitizeUser(user).subscription,
-        plan,
-      },
-    });
-  } catch (error) {
-    console.error("activateSubscription error:", error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Unable to activate plan",
-    });
-  }
+  // Plans are only activated by a verified payment (see
+  // controllers/payment.controller.js). This endpoint used to grant
+  // any plan for free; it is intentionally closed.
+  return res.status(410).json({
+    success: false,
+    message: "Plans are activated through checkout (POST /api/payments/order).",
+  });
 };
 
 

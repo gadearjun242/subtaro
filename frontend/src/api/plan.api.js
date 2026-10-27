@@ -6,6 +6,10 @@ export const planApi = {
 
 export const subscriptionApi = {
   getMine: () => api.get('/users/me/subscription').then((r) => r.data),
-  activate: (planKey) =>
-    api.post('/users/me/subscription/activate', { planKey }).then((r) => r.data),
+}
+
+export const paymentApi = {
+  config: () => api.get('/payments/config').then((r) => r.data),
+  createOrder: (planKey) => api.post('/payments/order', { planKey }).then((r) => r.data),
+  verify: (payload) => api.post('/payments/verify', payload).then((r) => r.data),
 }

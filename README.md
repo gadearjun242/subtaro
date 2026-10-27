@@ -39,6 +39,7 @@ The repository includes a small before/after demo used by the public landing pag
 
 ## Table of contents
 
+0. [Production update](#production-update)
 1. [What Subtaro is](#what-subtaro-is)
 2. [Repository scope](#repository-scope)
 3. [Architecture](#architecture)
@@ -62,6 +63,37 @@ The repository includes a small before/after demo used by the public landing pag
 21. [Recommended target architecture](#recommended-target-architecture)
 22. [Maintainer guide](#maintainer-guide)
 23. [Final assessment](#final-assessment)
+
+---
+
+## Production update
+
+This section summarises the production pass made after the original analysis. The rest of the document describes the architecture; where it conflicts with this section, this section wins.
+
+### Product behaviour
+
+- **10-day free trial**, then paid plans (monthly, 3, 6 and 12 months, in INR). The lifetime plan was removed.
+- **Payments** use Razorpay (`/api/payments/*`). When `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` are not set, the pricing page stays visible and choosing a plan opens `PORTFOLIO_URL` instead of a checkout.
+- After a trial or plan ends, users can still view, download and delete their projects; uploading, creating, resuming, duplicating and editing are blocked with HTTP 402.
+- **Vocal and instrumental stems** are fetched from the subtitle service after a project completes, encoded to MP3, stored under the project's Cloudinary folder and shown for download. This needs the extra endpoint in `subtitle-service-patch/stems_endpoint.py` on the subtitle service; without it, stems are marked unavailable and nothing else is affected.
+- **Deleting a project or account** removes every Cloudinary asset for it: the whole project folder (subtitles, rendered video, stems) plus the source upload, unless a duplicate still uses it.
+
+### Studio and caption styling
+
+- `/dashboard/projects/:id/studio` is a full-screen editor: live preview, caption list, a draggable timeline (move, resize, split, undo/redo, keyboard shortcuts) and a style inspector.
+- **Every caption has its own full style** (font, size, bold/italic/uppercase, text colour and opacity, outline, shadow and shadow colour, background box, letter spacing, rotation and position). Captions can be dragged and resized directly on the video, and a style can be copied to the following or to all captions.
+- Rendering generates a temporary `.ass` file from the clean SRT plus the per-caption styles (`backend/services/ass.service.js`) and burns it in with FFmpeg. All style values are validated and clamped server-side and caption text has override tags stripped, so user input cannot inject ASS or FFmpeg options.
+- The Docker image installs Liberation, DejaVu, Roboto, Open Sans, Lato and Montserrat fonts alongside Noto so the font choices render as previewed.
+
+### Hardening
+
+- Content-Security-Policy is enabled with an explicit allowlist (Cloudinary media, Google Fonts, Razorpay, Socket.IO). Set `CSP_REPORT_ONLY=true` to log violations without blocking while debugging.
+- New environment variables: `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `PORTFOLIO_URL`, `CONTACT_EMAIL`, `MAX_STEM_DOWNLOAD_BYTES`, `CSP_REPORT_ONLY` (see `backend/.env.example`).
+
+### Still open
+
+- No automated tests yet (see the testing strategy below).
+- Refresh-token rotation/reuse detection, the output-regeneration versus delete race, and readiness probes for dependencies are unchanged from the findings below.
 
 ---
 
@@ -259,7 +291,7 @@ The browser can upload video/audio/image files. Project creation should be treat
 
 ### 6.1 User
 
-`User.js` contains identity, authentication and account lifecycle fields. Passwords are excluded from ordinary selection; email is normalized/lowercased and indexed uniquely. Email verification stores a hashed random token and expiry rather than the raw token. Subscription state is nested, with six plan-key values (`free_trial`, `monthly`, `quarterly`, `half_yearly`, `yearly`, `lifetime`) and status values (`trialing`, `active`, `expired`, `cancelled`). `hasActiveAccess()` supports lifetime, legacy and expiry calculations. Analytics counters are maintained as user-level aggregates but the dashboard also computes project analytics directly, so these counters should be considered operational/summary data rather than the only statistical source.
+`User.js` contains identity, authentication and account lifecycle fields. Passwords are excluded from ordinary selection; email is normalized/lowercased and indexed uniquely. Email verification stores a hashed random token and expiry rather than the raw token. Subscription state is nested, with five plan-key values (`free_trial`, `monthly`, `quarterly`, `half_yearly`, `yearly`) and status values (`trialing`, `active`, `expired`, `cancelled`). New accounts start a **10-day free trial**. `hasActiveAccess()` computes access from status and expiry, and the `requireActiveSubscription` middleware enforces it on upload, project creation, resume, duplicate and subtitle-edit routes (HTTP 402 `SUBSCRIPTION_REQUIRED`). Reading, downloading and deleting stay available after a trial or plan ends. Analytics counters are maintained as user-level aggregates but the dashboard also computes project analytics directly, so these counters should be considered operational/summary data rather than the only statistical source.
 
 ### 6.2 Project
 
@@ -318,7 +350,10 @@ The model also tracks notification outcome (`pending`, `sent`, `failed`, `not_re
 | GET | `/api/users/me/stats` | Access JWT | Analytics |
 | GET | `/api/users/me/storage` | Access JWT | Storage usage |
 | GET | `/api/users/me/subscription` | Access JWT | Subscription state |
-| POST | `/api/users/me/subscription/activate` | Access JWT | **Placeholder manual activation** |
+| POST | `/api/users/me/subscription/activate` | Access JWT | **Closed (410).** Plans are only activated by a verified payment |
+| GET | `/api/payments/config` | Public | Whether checkout is enabled, plus the portfolio/contact fallback |
+| POST | `/api/payments/order` | Access JWT | Creates a Razorpay order for a paid plan (503 when payments are not configured) |
+| POST | `/api/payments/verify` | Access JWT | Verifies the HMAC signature, then activates/extends the plan (idempotent) |
 | PATCH | `/api/users/me/deactivate` | Access JWT | Soft deactivate |
 | DELETE | `/api/users/me` | Access JWT | Delete account + DB data |
 | POST | `/api/webhooks/subtitle/:projectId` | HMAC token | External subtitle callback |
@@ -476,7 +511,7 @@ Before debugging application behavior, verify:
 
 ### Scaled profile
 
-Compose also defines a `worker` service under the `scaled` profile, but its command is `node worker.js`. There is no `backend/worker.js` in this repository; the actual worker implementation is `backend/workers/render.worker.js`. Therefore the scaled worker definition cannot work as written without adding/fixing a worker entrypoint.
+Compose also defines a `worker` service under the `scaled` profile. Its command is `node worker.js`, which now exists (`backend/worker.js`): it connects to MongoDB, starts the BullMQ render worker and shuts down cleanly on SIGINT/SIGTERM. Run it with `ENABLE_RENDER_WORKER=false` on the API process so jobs are not consumed twice.
 
 ### Alternate legacy path
 
@@ -545,13 +580,10 @@ Local/operational Compose topology for API + Redis with an optional scaled worke
 Exact backend dependency lockfile. Treat as generated package-manager state; update together with package.json and verify the lockfile in CI.
 
 #### `backend/package.json` — 39 lines
-Backend dependency manifest and operational scripts. `start`/`dev` target server.js; the `worker` scripts target a separate worker.js that is not present in this repository, creating a concrete maintenance/deployment inconsistency.
+Backend dependency manifest and operational scripts. `start`/`dev` target `server.js`; the `worker` scripts target `worker.js`, the standalone render-worker entrypoint.
 
 #### `backend/supervisord.conf` — 118 lines
 Legacy/alternative container startup definition that embeds Redis + Node under Supervisor. The active Dockerfile does not use it, and Compose runs Redis as its own service, so this file should be treated as historical or an alternate deployment artifact until deliberately standardized.
-
-#### `backend/temp.email.service.txt` — 2299 lines
-Scratch/reference text containing an older email-service implementation. It is not part of the runtime dependency graph; retaining executable-looking legacy code in `.txt` can confuse maintainers and should be moved to historical docs or removed once no longer needed.
 
 ### Backend application code
 
@@ -618,7 +650,7 @@ MongoDB schema for subscription plans seeded from the static catalog in plan.ser
 Central domain schema. Models ownership, stable projectId, status, media input, subtitle mode/style, external subtitle-service state, five pipeline steps, generated subtitle metadata/file, final output video metadata/file, notifications, processing metrics, logs, failure details and source metadata. Several helper methods and validators protect step integrity and make status checks explicit.
 
 #### `backend/models/User.js` — 218 lines
-User/account schema with unique normalized email, bcrypt password hash, email-verification state, activation flag, refresh-token versioning, subscription state, and analytics counters. Includes hasActiveAccess() to compute legacy/lifetime/active access semantics, but route protection does not currently call it for subscription gating.
+User/account schema with unique normalized email, bcrypt password hash, email-verification state, activation flag, refresh-token versioning, subscription state (10-day trial by default), and analytics counters. `hasActiveAccess()` computes access and is enforced by `requireActiveSubscription`.
 
 ### Backend services & workers
 
@@ -641,7 +673,7 @@ Media-processing core. Downloads remote media with bounded size/timeouts, probes
 Project outcome notification policy. Tracks the notification state, suppresses email when the user is currently connected via Socket.IO, otherwise sends completion/failure email and records sent/failed/not_required state.
 
 #### `backend/services/plan.service.js` — 173 lines
-Subscription catalog/service layer. Seeds six plan variants at startup, exposes active plans, resolves plans by key, and calculates subscription windows including lifetime plans.
+Subscription catalog/service layer. Seeds the five plan variants (a 10-day free trial plus monthly, 3-month, 6-month and 12-month plans, priced in INR), deactivates retired plans such as the former lifetime plan, exposes active plans, resolves plans by key and calculates subscription windows.
 
 #### `backend/services/project.service.js` — 1191 lines
 Application integration/orchestration for the external subtitle service. Defines the five processing stages, generates signed webhook URLs, submits projects, syncs remote status/logs back into MongoDB, resumes failed jobs, and emits project events on meaningful state changes.
@@ -949,7 +981,7 @@ Composes the full marketing home page from the landing components; no authentica
 Fallback 404 page for unknown client-side routes.
 
 #### `frontend/src/pages/public/Pricing.jsx` — 131 lines
-Public pricing page. Loads plans from the backend and, when authenticated, can invoke the current placeholder subscription activation flow.
+Public pricing page. Loads plans from the backend and shows prices in INR. With Razorpay configured, it opens the checkout and verifies the payment server-side; without it, choosing a plan opens the owner's portfolio link (`PORTFOLIO_URL`).
 
 #### `frontend/src/pages/public/Privacy.jsx` — 42 lines
 Static privacy-policy page rendered through LegalPage.
@@ -1002,7 +1034,7 @@ cd backend
 docker compose up --build
 ```
 
-For the current codebase, keep `ENABLE_RENDER_WORKER=true` unless the worker entrypoint is standardized. The intended scaled design needs a dedicated worker entrypoint (currently missing as `worker.js`).
+The default is the in-process worker (`ENABLE_RENDER_WORKER=true`). To scale rendering separately, set it to `false` on the API and run `worker.js` (or the Compose `scaled` profile) as its own process.
 
 ## 17. Verification performed
 
@@ -1010,7 +1042,7 @@ For the current codebase, keep `ENABLE_RENDER_WORKER=true` unless the worker ent
 
 - The repository inventory excludes `backend/public/**` exactly as requested.
 
-- Static inspection identified a concrete missing-file reference: `backend/package.json` and `backend/docker-compose.yml` expect `worker.js`, but the repository contains `workers/render.worker.js` instead.
+- `backend/worker.js` was previously missing; it now exists, so `npm run worker` and the Compose `scaled` profile work.
 
 - The root README is not a substantive technical guide; this document therefore intentionally becomes the practical architecture reference.
 
@@ -1018,16 +1050,16 @@ For the current codebase, keep `ENABLE_RENDER_WORKER=true` unless the worker ent
 
 ### P0/P1 — fix before relying on this in a multi-tenant production environment
 
-**1. Bind project input assets to the authenticated user.**
+**1. Bind project input assets to the authenticated user.** *(Resolved: project creation requires the asset to live under the caller's own `uploads/` folder on our Cloudinary account.)*
 The project-create API accepts a client-supplied Cloudinary URL/publicId pair. Do not trust that tuple by itself. Persist a server-issued upload token/reference and validate ownership/resource type before starting the remote subtitle pipeline.
 
-**2. Fix the scaled-worker entrypoint.**
+**2. Fix the scaled-worker entrypoint.** *(Resolved: `backend/worker.js` added.)*
 Either add a tiny `worker.js` bootstrap that imports/starts `workers/render.worker.js`, or change Compose/package scripts to invoke the real file. This is operationally critical.
 
-**3. Replace placeholder subscription activation with a real payment verification path.**
+**3. Replace placeholder subscription activation with a real payment verification path.** *(Resolved: Razorpay order + HMAC-verified activation; the old endpoint returns 410.)*
 The current endpoint can immediately mark a user paid with a manually recorded payment object. In production this is not an entitlement control. Introduce a payment-provider webhook/signature verification flow and make activation idempotent.
 
-**4. Add actual subscription gating.**
+**4. Add actual subscription gating.** *(Resolved: `requireActiveSubscription` on resource-consuming routes.)*
 `protect` checks only token validity and `isActive`. If plan limits/entitlements are part of the product, enforce them in project creation, storage, processing duration, or another explicit policy layer.
 
 ### P1/P2 — security/reliability hardening
@@ -1073,7 +1105,7 @@ The backend `test` script is a placeholder and there are no visible unit/integra
 | Subtitle edit | valid/invalid SRT; 2 MiB boundary; mode/style changes; concurrent edits; regeneration failure |
 | Delete | completed project cleanup; shared publicId; delete while output regeneration is queued/processing |
 | UI session | access expiry with multiple simultaneous requests; socket reconnect after token refresh |
-| Plans | activation cannot grant paid access without provider proof; expired/lifetime calculations |
+| Plans | activation requires a verified payment; trial/plan expiry; payment replay is idempotent |
 
 ## 20. Architecture assessment
 

@@ -4,21 +4,21 @@ import { Loader2 } from 'lucide-react'
 
 const variants = {
   primary:
-    'bg-gradient-to-r from-brand-600 to-brand-500 text-white shadow-lg shadow-brand-500/25 hover:shadow-brand-500/40 hover:brightness-110 focus-visible:ring-brand-400',
+    'bg-brand-600 text-white hover:bg-brand-700 focus-visible:ring-brand-400',
   secondary:
-    'bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-100 dark:hover:bg-slate-700 focus-visible:ring-slate-400',
+    'bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 focus-visible:ring-slate-400',
   outline:
-    'border border-slate-300 text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800 focus-visible:ring-slate-400',
+    'border border-slate-300 text-slate-800 hover:bg-slate-50 dark:border-white/20 dark:text-slate-100 dark:hover:bg-white/10 focus-visible:ring-slate-400',
   ghost:
-    'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 focus-visible:ring-slate-400',
+    'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/10 focus-visible:ring-slate-400',
   danger:
-    'bg-red-600 text-white hover:bg-red-500 shadow-lg shadow-red-500/20 focus-visible:ring-red-400',
+    'bg-red-600 text-white hover:bg-red-500 focus-visible:ring-red-400',
 }
 
 const sizes = {
-  sm: 'h-8 px-3 text-sm gap-1.5',
-  md: 'h-10 px-4 text-sm gap-2',
-  lg: 'h-12 px-6 text-base gap-2',
+  sm: 'h-8 px-4 text-[13px] gap-1.5',
+  md: 'h-10 px-5 text-sm gap-2',
+  lg: 'h-12 px-7 text-[17px] gap-2',
   icon: 'h-10 w-10 shrink-0',
 }
 
@@ -42,7 +42,7 @@ const Button = forwardRef(
         type={type}
         disabled={disabled || loading}
         className={clsx(
-          'inline-flex cursor-pointer items-center justify-center rounded-xl font-semibold transition-all duration-150 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-slate-950',
+          'inline-flex cursor-pointer items-center justify-center whitespace-nowrap rounded-full font-medium transition-all duration-200 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-black',
           variants[variant],
           sizes[size],
           className

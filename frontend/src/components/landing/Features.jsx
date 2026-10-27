@@ -1,108 +1,123 @@
 import { motion } from 'framer-motion'
-import {
-  Users,
-  Wand2,
-  FileDown,
-  RadioTower,
-  PencilLine,
-  ShieldCheck,
-} from 'lucide-react'
+import { AudioLines, Users, Wand2, Radio, Layers, ShieldCheck, Captions, Music2 } from 'lucide-react'
 
-const FEATURES = [
-  {
-    icon: Users,
-    title: 'Speaker diarization',
-    desc: 'Automatically detects who is speaking and when, so multi-speaker content stays accurate.',
-    accent: 'from-brand-500 to-brand-600',
-    glow: 'bg-brand-400/30',
-  },
-  {
-    icon: Wand2,
-    title: 'Speaker-aware transcription',
-    desc: 'Transcription tuned per-speaker for far higher accuracy than generic ASR.',
-    accent: 'from-accent-500 to-pink-600',
-    glow: 'bg-accent-400/30',
-  },
-  {
-    icon: RadioTower,
-    title: 'Live pipeline updates',
-    desc: 'Watch every processing step update in real time over a socket connection — no refreshing.',
-    accent: 'from-sky-500 to-blue-600',
-    glow: 'bg-sky-400/30',
-  },
-  {
-    icon: PencilLine,
-    title: 'Editable subtitles',
-    desc: 'Fine-tune the generated SRT right in your dashboard, then save an updated file.',
-    accent: 'from-emerald-500 to-teal-600',
-    glow: 'bg-emerald-400/30',
-  },
-  {
-    icon: FileDown,
-    title: 'Video or audio in',
-    desc: 'Drop in MP4, MOV, MKV, MP3, WAV, FLAC and more — output stays clean either way.',
-    accent: 'from-amber-500 to-orange-600',
-    glow: 'bg-amber-400/30',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Secure by default',
-    desc: 'JWT-based auth, hashed passwords, and per-user isolated storage for every upload.',
-    accent: 'from-violet-500 to-purple-600',
-    glow: 'bg-violet-400/30',
-  },
-]
+const fade = {
+  initial: { opacity: 0, y: 24 },
+  whileInView: { opacity: 1, y: 0 },
+  viewport: { once: true, margin: '-60px' },
+}
+
+function Tile({ className = '', children, delay = 0 }) {
+  return (
+    <motion.div
+      {...fade}
+      transition={{ duration: 0.6, delay }}
+      className={`relative overflow-hidden rounded-[2rem] border border-black/5 bg-slate-50 p-7 dark:border-white/10 dark:bg-white/[0.04] sm:p-9 ${className}`}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
+const Eyebrow = ({ icon: Icon, children }) => (
+  <p className="flex items-center gap-2 text-sm font-semibold text-brand-600 dark:text-brand-400">
+    <Icon className="h-4 w-4" /> {children}
+  </p>
+)
+
+const Title = ({ children }) => (
+  <h3 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-3xl">{children}</h3>
+)
+
+const Body = ({ children }) => (
+  <p className="mt-3 max-w-md text-[15px] leading-relaxed text-slate-500 dark:text-slate-400">{children}</p>
+)
+
+function Bars() {
+  return (
+    <div className="mt-8 flex h-24 items-end gap-1.5">
+      {Array.from({ length: 36 }).map((_, i) => (
+        <span
+          key={i}
+          className="w-full animate-wave rounded-full bg-gradient-to-t from-brand-600 to-brand-400"
+          style={{ animationDelay: `${(i % 12) * 0.09}s`, height: '40%' }}
+        />
+      ))}
+    </div>
+  )
+}
 
 export default function Features() {
   return (
-    <section id="features" className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-2xl text-center">
-        <h2 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-          Everything you need, nothing you don't
+    <section id="features" className="mx-auto max-w-7xl scroll-mt-20 px-4 py-24 sm:px-6 sm:py-32 lg:px-8">
+      <motion.div {...fade} transition={{ duration: 0.6 }} className="mx-auto max-w-3xl text-center">
+        <h2 className="text-4xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-6xl">
+          Everything captions need.
+          <br />
+          <span className="text-slate-400 dark:text-slate-500">Nothing they don&rsquo;t.</span>
         </h2>
-        <p className="mt-4 text-slate-500 dark:text-slate-400">
-          A focused pipeline that goes from raw media to polished subtitles.
-        </p>
-      </div>
+      </motion.div>
 
-      <div className="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {FEATURES.map(({ icon: Icon, title, desc, accent, glow }, i) => (
-          <motion.div
-            key={title}
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: '-60px' }}
-            transition={{ duration: 0.4, delay: (i % 3) * 0.08 }}
-            className="group relative overflow-hidden rounded-2xl border border-slate-200 bg-white p-6 transition-all hover:-translate-y-1 hover:shadow-xl hover:shadow-slate-200/60 dark:border-slate-800 dark:bg-slate-900 dark:hover:shadow-none"
-          >
-            {/* Decorative corner glow, revealed on hover */}
-            <span
-              className={`pointer-events-none absolute -right-8 -top-8 h-24 w-24 rounded-full ${glow} opacity-0 blur-2xl transition-opacity duration-500 group-hover:opacity-100`}
-            />
+      <div className="mt-16 grid gap-4 lg:grid-cols-6">
+        <Tile className="lg:col-span-4">
+          <Eyebrow icon={AudioLines}>Vocal isolation</Eyebrow>
+          <Title>Hears the voice, not the noise.</Title>
+          <Body>
+            Every file is split into vocals and instrumental first, so transcription locks onto
+            speech even over loud music. You get both tracks back as downloads.
+          </Body>
+          <Bars />
+        </Tile>
 
-            {/* Faint dot-grid texture in the corner for extra depth */}
-            <svg
-              className="pointer-events-none absolute right-3 top-3 h-16 w-16 text-slate-100 opacity-70 dark:text-slate-800"
-              viewBox="0 0 64 64"
-              fill="none"
-            >
-              {Array.from({ length: 4 }).map((_, row) =>
-                Array.from({ length: 4 }).map((_, col) => (
-                  <circle key={`${row}-${col}`} cx={6 + col * 16} cy={6 + row * 16} r="1.6" fill="currentColor" />
-                ))
-              )}
-            </svg>
+        <Tile className="lg:col-span-2" delay={0.08}>
+          <Eyebrow icon={Users}>Speaker-aware</Eyebrow>
+          <Title>Knows who is talking.</Title>
+          <Body>Diarization separates speakers before a single word is transcribed.</Body>
+          <div className="mt-8 space-y-2.5">
+            {['Speaker 1', 'Speaker 2'].map((s, i) => (
+              <div key={s} className="flex items-center gap-3">
+                <span className={`h-7 w-7 rounded-full ${i ? 'bg-accent-500' : 'bg-brand-600'}`} />
+                <span className="h-2.5 flex-1 rounded-full bg-slate-200 dark:bg-white/10" style={{ maxWidth: i ? '55%' : '80%' }} />
+              </div>
+            ))}
+          </div>
+        </Tile>
 
-            <span
-              className={`relative flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br ${accent} text-white shadow-lg shadow-slate-900/10 transition-transform duration-300 group-hover:scale-110 group-hover:-rotate-3`}
-            >
-              <Icon className="h-5 w-5" strokeWidth={2.25} />
-            </span>
-            <h3 className="relative mt-4 text-base font-bold text-slate-900 dark:text-white">{title}</h3>
-            <p className="relative mt-1.5 text-sm text-slate-500 dark:text-slate-400">{desc}</p>
-          </motion.div>
-        ))}
+        <Tile className="lg:col-span-2" delay={0.04}>
+          <Eyebrow icon={Wand2}>Studio editor</Eyebrow>
+          <Title>Edit like a video editor.</Title>
+          <Body>Timeline, drag-to-retime, split, undo, and a live preview.</Body>
+        </Tile>
+
+        <Tile className="lg:col-span-2" delay={0.08}>
+          <Eyebrow icon={Captions}>Total styling</Eyebrow>
+          <Title>Make it yours.</Title>
+          <Body>Font, size, colors, outline, background box and position, all rendered in.</Body>
+        </Tile>
+
+        <Tile className="lg:col-span-2" delay={0.12}>
+          <Eyebrow icon={Radio}>Live progress</Eyebrow>
+          <Title>Watch it work.</Title>
+          <Body>Every pipeline step streams to your screen in real time.</Body>
+        </Tile>
+
+        <Tile className="lg:col-span-3" delay={0.04}>
+          <Eyebrow icon={Layers}>Two ways to deliver</Eyebrow>
+          <Title>Burned in, or a selectable track.</Title>
+          <Body>Hard-code captions into the pixels for social, or ship one clean MP4 viewers can toggle.</Body>
+        </Tile>
+
+        <Tile className="lg:col-span-3" delay={0.08}>
+          <Eyebrow icon={ShieldCheck}>Yours, and only yours</Eyebrow>
+          <Title>Delete it. It&rsquo;s gone.</Title>
+          <Body>
+            Remove a project and every file tied to it, including source, captions, video and audio
+            stems, is erased from storage.
+          </Body>
+        </Tile>
       </div>
     </section>
   )
 }
+
+export { Music2 }

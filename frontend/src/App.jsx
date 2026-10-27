@@ -26,6 +26,7 @@ const Overview = lazy(() => import('@/pages/dashboard/Overview'))
 const ProjectsList = lazy(() => import('@/pages/dashboard/ProjectsList'))
 const NewProject = lazy(() => import('@/pages/dashboard/NewProject'))
 const ProjectDetail = lazy(() => import('@/pages/dashboard/ProjectDetail'))
+const Studio = lazy(() => import('@/pages/dashboard/Studio'))
 const Analytics = lazy(() => import('@/pages/dashboard/Analytics'))
 const Profile = lazy(() => import('@/pages/dashboard/Profile'))
 
@@ -64,6 +65,8 @@ export default function App() {
 
           {/* Private dashboard */}
           <Route element={<ProtectedRoute />}>
+            {/* Full-screen editor: intentionally outside the dashboard chrome */}
+            <Route path="dashboard/projects/:projectId/studio" element={<Studio />} />
             <Route path="dashboard" element={<DashboardLayout />}>
               <Route index element={<Overview />} />
               <Route path="projects" element={<ProjectsList />} />

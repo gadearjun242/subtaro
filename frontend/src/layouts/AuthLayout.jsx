@@ -1,5 +1,5 @@
-import { Outlet, Link } from 'react-router-dom'
-import { Captions, Sparkles, Waves, ShieldCheck } from 'lucide-react'
+import { Outlet } from 'react-router-dom'
+import { Sparkles, Waves, ShieldCheck } from 'lucide-react'
 import Logo from '@/components/common/Logo'
 import ThemeToggle from '@/components/common/ThemeToggle'
 import { APP_NAME } from '@/lib/config'
@@ -19,15 +19,10 @@ export default function AuthLayout() {
         <div className="absolute -bottom-24 -right-24 h-96 w-96 animate-blob rounded-full bg-accent-500/30 blur-3xl" style={{ animationDelay: '3s' }} />
         <div className="absolute inset-0 bg-grid opacity-40" />
 
-        <Link to="/" className="relative z-10 flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-accent-500 shadow-lg shadow-brand-500/30">
-            <Captions className="h-5 w-5" strokeWidth={2.5} />
-          </span>
-          <span className="text-lg font-extrabold">{APP_NAME}</span>
-        </Link>
+        <Logo onDark className="relative z-10" />
 
         <div className="relative z-10 max-w-md">
-          <h2 className="text-3xl font-extrabold leading-tight">
+          <h2 className="text-4xl font-semibold leading-tight tracking-tight">
             Turn any video or audio into clean subtitles.
           </h2>
           <div className="mt-8 space-y-4">
@@ -56,6 +51,22 @@ export default function AuthLayout() {
         <div className="flex flex-1 items-center justify-center py-10">
           <div className="w-full max-w-sm">
             <Outlet />
+
+            {/* The brand panel is a side column on large screens; on small
+                screens its points sit under the form so nothing is lost. */}
+            <div className="mt-10 space-y-3 border-t border-black/5 pt-8 dark:border-white/10 lg:hidden">
+              <p className="text-sm font-semibold text-slate-900 dark:text-white">
+                Turn any video or audio into clean subtitles.
+              </p>
+              {POINTS.map(({ icon: Icon, text }) => (
+                <div key={text} className="flex items-center gap-3">
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-brand-600 dark:bg-white/10 dark:text-brand-400">
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <p className="text-sm text-slate-600 dark:text-slate-300">{text}</p>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>

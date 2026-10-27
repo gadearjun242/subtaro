@@ -3,6 +3,7 @@ import clsx from 'clsx'
 import Sidebar from '@/components/layout/Sidebar'
 import Header from '@/components/layout/Header'
 import EmailVerificationBanner from '@/components/dashboard/EmailVerificationBanner'
+import SubscriptionBanner from '@/components/dashboard/SubscriptionBanner'
 import { SidebarProvider, useSidebar } from '@/context/SidebarContext'
 import { SocketProvider } from '@/context/SocketContext'
 import { NotificationsProvider } from '@/context/NotificationsContext'
@@ -13,7 +14,7 @@ function DashboardShell() {
   const { user } = useAuth()
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950">
+    <div className="min-h-screen bg-slate-50 dark:bg-black">
       <Sidebar />
       <div
         className={clsx(
@@ -23,6 +24,7 @@ function DashboardShell() {
       >
         <Header />
         {user && !user.isEmailVerified && <EmailVerificationBanner />}
+        <SubscriptionBanner />
         <main className="flex-1 overflow-y-auto scrollbar-thin p-4 sm:p-6 lg:p-8">
           <Outlet />
         </main>

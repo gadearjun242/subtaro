@@ -1,0 +1,1 @@
+import{t as e}from"./jsx-runtime-Cx0BB4qO.js";import{t}from"./clsx-RXocPj9y.js";var n=e();function r({className:e,children:r,...i}){return(0,n.jsx)(`div`,{className:t(`rounded-3xl border border-black/5 bg-white shadow-[0_1px_2px_rgb(0_0_0/0.04),0_8px_24px_-12px_rgb(0_0_0/0.08)] dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none`,e),...i,children:r})}export{r as t};
