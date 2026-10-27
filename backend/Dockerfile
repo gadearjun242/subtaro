@@ -19,7 +19,6 @@ RUN apt-get update && \
         fonts-roboto \
         fonts-open-sans \
         fonts-lato \
-        fonts-montserrat \
         ca-certificates && \
     fc-cache -f && \
     rm -rf /var/lib/apt/lists/*
