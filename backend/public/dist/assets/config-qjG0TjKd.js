@@ -1,1 +1,0 @@
-var e=`Subtaro`,t=`/api`,n=`http://localhost:5000`,r=`https://arjun-gade-portfolio.vercel.app`,i=10485760;export{n as a,r as i,e as n,i as r,t};

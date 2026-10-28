@@ -1,0 +1,19 @@
+{
+  "id": "/",
+  "name": "Subtaro — AI Subtitles for Video & Audio",
+  "short_name": "Subtaro",
+  "description": "Generate and edit accurate AI subtitles for video and audio.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6366F1",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
