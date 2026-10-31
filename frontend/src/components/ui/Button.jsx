@@ -4,7 +4,7 @@ import { Loader2 } from 'lucide-react'
 
 const variants = {
   primary:
-    'bg-brand-600 text-white hover:bg-brand-700 focus-visible:ring-brand-400',
+    'bg-gradient-to-r from-brand-600 to-accent-500 text-white shadow-[0_10px_26px_-12px_rgb(10_132_255/0.72)] hover:-translate-y-0.5 hover:shadow-[0_14px_30px_-12px_rgb(10_132_255/0.8)] focus-visible:ring-brand-400',
   secondary:
     'bg-slate-100 text-slate-900 hover:bg-slate-200 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 focus-visible:ring-slate-400',
   outline:

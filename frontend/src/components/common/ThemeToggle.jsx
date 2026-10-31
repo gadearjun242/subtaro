@@ -9,7 +9,9 @@ export default function ThemeToggle({ className }) {
   return (
     <button
       onClick={toggleTheme}
-      aria-label="Toggle theme"
+      aria-label={`Switch to ${isDark ? 'light' : 'dark'} theme`}
+      aria-pressed={isDark}
+      title={`Switch to ${isDark ? 'light' : 'dark'} theme`}
       className={clsx(
         'relative flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white',
         className

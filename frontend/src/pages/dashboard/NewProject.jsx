@@ -74,18 +74,17 @@ export default function NewProject() {
   const canSubmit = uploaded && name.trim().length > 0 && !createMutation.isPending
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-3xl">
       <Card className="p-6 sm:p-8">
-        <div className="flex items-center gap-2 text-brand-600 dark:text-brand-400">
-          <Sparkles className="h-4 w-4" />
-          <span className="text-xs font-bold uppercase tracking-wide">New project</span>
+        <div className="flex items-center gap-2">
+          <span className="premium-eyebrow"><Sparkles className="h-3.5 w-3.5" /> New project</span>
         </div>
-        <h2 className="mt-2 text-2xl font-extrabold text-slate-900 dark:text-white">
-          Upload your video or audio
+        <h2 className="mt-5 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">
+          Start with a recording.
         </h2>
-        <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
-          We'll separate speakers, transcribe the content, and generate an
-          accurate subtitle file automatically.
+        <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-500 dark:text-slate-400">
+          Upload video or audio. We’ll identify speakers, transcribe the content, and prepare
+          your subtitles for the finishing touches.
         </p>
 
         <div className="mt-7">

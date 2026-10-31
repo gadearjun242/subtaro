@@ -294,7 +294,7 @@ export default function ProjectDetail() {
         {/* Left column: media + tabs */}
         <div className="space-y-6">
           <Card className="overflow-hidden">
-            <div className="relative flex aspect-video items-center justify-center bg-slate-950">
+            <div className="relative flex aspect-video items-center justify-center bg-[#080b13]">
               {isVideo && project.output?.status === 'processing' && (
                 <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 bg-slate-950/70 backdrop-blur-sm">
                   <Loader2 className="h-6 w-6 animate-spin text-brand-400" />

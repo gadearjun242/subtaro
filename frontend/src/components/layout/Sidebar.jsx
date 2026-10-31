@@ -53,14 +53,14 @@ export default function Sidebar() {
 
       <aside
         className={clsx(
-          'fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-black/5 bg-white transition-all duration-200 dark:border-white/10 dark:bg-[#0b0b0c]',
+          'fixed inset-y-0 left-0 z-50 flex h-full flex-col border-r border-black/5 bg-[#f7f6f1]/95 transition-all duration-200 backdrop-blur-2xl dark:border-white/[0.08] dark:bg-[#0b101b]/95',
           collapsed ? 'lg:w-[76px]' : 'lg:w-64',
           'w-64',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
         {/* Top: logo */}
-        <div className="flex h-14 shrink-0 items-center justify-between px-4">
+        <div className="flex h-[4.25rem] shrink-0 items-center justify-between border-b border-black/[0.04] px-4 dark:border-white/[0.06]">
           <Logo showText={!collapsed} />
           <button
             onClick={toggleSidebar}
@@ -77,7 +77,7 @@ export default function Sidebar() {
             onClick={closeMobile}
             title={collapsed ? 'New Project' : undefined}
             className={clsx(
-              'flex cursor-pointer items-center gap-2 rounded-full bg-brand-600 px-3 py-2.5 text-sm font-medium text-white transition-all hover:bg-brand-700 active:scale-[0.98]',
+              'flex cursor-pointer items-center gap-2 rounded-2xl bg-gradient-to-r from-brand-600 to-accent-500 px-3 py-3 text-sm font-semibold text-white shadow-[0_10px_26px_-14px_rgb(10_132_255/0.9)] transition-all hover:-translate-y-0.5 active:scale-[0.98]',
               collapsed ? 'justify-center' : 'justify-center',
               isNewProjectActive && 'ring-2 ring-brand-300 ring-offset-2 dark:ring-offset-black'
             )}
@@ -99,8 +99,8 @@ export default function Sidebar() {
                 clsx(
                   'flex cursor-pointer items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
                   isActive
-                    ? 'bg-slate-100 text-slate-900 dark:bg-white/10 dark:text-white'
-                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/5 dark:hover:text-slate-100'
+                    ? 'bg-brand-50 text-brand-700 dark:bg-brand-500/[0.14] dark:text-brand-200'
+                    : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-white/[0.055] dark:hover:text-slate-100'
                 )
               }
               title={collapsed ? label : undefined}

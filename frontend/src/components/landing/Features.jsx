@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { m as motion } from 'framer-motion'
 import { AudioLines, Users, Wand2, Radio, Layers, ShieldCheck, Captions, Music2 } from 'lucide-react'
 
 const fade = {

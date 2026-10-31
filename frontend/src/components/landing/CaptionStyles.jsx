@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { m as motion } from 'framer-motion'
 import clsx from 'clsx'
 import { PRESET_STYLES, captionCss, frameAlignment } from '@/lib/subtitleStyle'
 

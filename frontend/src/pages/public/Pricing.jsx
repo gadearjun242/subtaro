@@ -1,14 +1,15 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
-import { Check, ExternalLink } from 'lucide-react'
+import { m as motion } from 'framer-motion'
+import { Check, ExternalLink, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { planApi, subscriptionApi, paymentApi } from '@/api/plan.api'
 import { useAuth } from '@/context/AuthContext'
 import Button from '@/components/ui/Button'
 import { Skeleton } from '@/components/ui/Feedback'
 import { PORTFOLIO_URL } from '@/lib/config'
+import PLAN_CATALOG from '../../../../backend/data/planCatalog.json'
 
 const formatPrice = (amount, currency = 'INR') =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency, maximumFractionDigits: 0 }).format(amount)
@@ -40,6 +41,8 @@ export default function Pricing() {
   const plansQuery = useQuery({
     queryKey: ['plans'],
     queryFn: () => planApi.list().then((r) => r.data.plans),
+    initialData: PLAN_CATALOG,
+    initialDataUpdatedAt: 0,
   })
 
   const configQuery = useQuery({
@@ -115,10 +118,12 @@ export default function Pricing() {
   const paidPlans = plansQuery.data?.filter((p) => p.price > 0) ?? []
 
   return (
-    <div>
-      <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
+    <div className="relative isolate overflow-hidden">
+      <div className="pointer-events-none absolute -top-32 left-1/2 -z-10 h-[34rem] w-[56rem] -translate-x-1/2 rounded-full bg-brand-500/[0.09] blur-[120px] dark:bg-brand-500/[0.13]" />
+      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-24 lg:px-8">
         <div className="mx-auto max-w-3xl text-center">
-          <h1 className="text-5xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-6xl">
+          <span className="premium-eyebrow"><Sparkles className="h-3.5 w-3.5" /> Simple, transparent pricing</span>
+          <h1 className="mt-6 text-5xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-6xl">
             Start free.
             <br />
             <span className="text-gradient">Stay for the details.</span>
@@ -154,10 +159,10 @@ export default function Pricing() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true, margin: '-40px' }}
                   transition={{ duration: 0.5, delay: i * 0.06 }}
-                  className={`relative flex flex-col rounded-3xl p-7 ${
+                  className={`relative flex flex-col rounded-[1.75rem] border p-7 shadow-[0_24px_70px_-44px_rgb(0_0_0/0.75)] transition-transform duration-300 hover:-translate-y-1 ${
                     isPopular
-                      ? 'bg-black text-white dark:bg-white dark:text-black'
-                      : 'border border-black/5 bg-slate-50 text-slate-900 dark:border-white/10 dark:bg-white/[0.04] dark:text-white'
+                      ? 'border-slate-900 bg-slate-900 text-white dark:border-brand-400/40 dark:bg-gradient-to-br dark:from-brand-600 dark:to-accent-500 dark:text-white'
+                      : 'border-black/[0.06] bg-[#fbfaf7]/85 text-slate-900 backdrop-blur-xl dark:border-white/[0.09] dark:bg-[#111725]/85 dark:text-white'
                   }`}
                 >
                   {plan.badge && (

@@ -9,6 +9,7 @@ import Pagination from '@/components/common/Pagination'
 import Button from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Skeleton } from '@/components/ui/Feedback'
+import Card from '@/components/ui/Card'
 import { useDebouncedValue } from '@/hooks/useDebouncedValue'
 
 const STATUS_OPTIONS = [
@@ -42,7 +43,7 @@ export default function ProjectsList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <Card className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
         <div className="flex flex-1 flex-col gap-3 sm:flex-row">
           <div className="w-full flex-1 sm:max-w-sm">
             <Input
@@ -75,7 +76,7 @@ export default function ProjectsList() {
             <PlusCircle className="h-4 w-4" /> New project
           </Button>
         </Link>
-      </div>
+      </Card>
 
       <div className="space-y-3">
         {query.isLoading && Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20 w-full rounded-2xl" />)}

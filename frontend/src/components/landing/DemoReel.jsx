@@ -1,6 +1,6 @@
-import { useRef, useState } from "react";
-import { motion } from "framer-motion";
-import { Film, Sparkles, UploadCloud, Volume2, VolumeX } from "lucide-react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { m as motion } from "framer-motion";
+import { Film, Sparkles } from "lucide-react";
 import clsx from "clsx";
 
 const BEFORE_VIDEO_URL = "/demo/before.mp4";
@@ -11,27 +11,56 @@ const TABS = [
   { id: "after", label: "After", hint: "Subtitled result" },
 ];
 
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+function subscribeToMotionPreference(onChange) {
+  const mediaQuery = window.matchMedia(REDUCED_MOTION_QUERY);
+  mediaQuery.addEventListener("change", onChange);
+  return () => mediaQuery.removeEventListener("change", onChange);
+}
+
+function getMotionPreference() {
+  return window.matchMedia(REDUCED_MOTION_QUERY).matches;
+}
+
 export default function DemoReel() {
   const [tab, setTab] = useState("after");
-  const [isMuted, setIsMuted] = useState(true);
+  const [shouldLoadVideo, setShouldLoadVideo] = useState(false);
+  const prefersReducedMotion = useSyncExternalStore(
+    subscribeToMotionPreference,
+    getMotionPreference,
+    () => false,
+  );
 
-  const videoRef = useRef(null);
+  const previewRef = useRef(null);
 
   const videoUrl = tab === "before" ? BEFORE_VIDEO_URL : AFTER_VIDEO_URL;
 
-  const handleMuteToggle = () => {
-    const video = videoRef.current;
+  useEffect(() => {
+    const preview = previewRef.current;
+    if (!preview || shouldLoadVideo) return undefined;
 
-    if (!video) return;
+    if (!("IntersectionObserver" in window)) {
+      const timeout = window.setTimeout(() => setShouldLoadVideo(true), 0);
+      return () => window.clearTimeout(timeout);
+    }
 
-    const newMutedState = !video.muted;
+    const observer = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) {
+        setShouldLoadVideo(true);
+        observer.disconnect();
+      }
+    }, { rootMargin: "250px" });
 
-    video.muted = newMutedState;
-    setIsMuted(newMutedState);
-  };
+    observer.observe(preview);
+    return () => observer.disconnect();
+  }, [shouldLoadVideo]);
 
   return (
-    <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
+    <section
+      ref={previewRef}
+      className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8"
+    >
       <div className="mx-auto max-w-2xl text-center">
         <span className="mx-auto inline-flex items-center gap-1.5 rounded-full border border-brand-200 bg-brand-50 px-3.5 py-1.5 text-xs font-semibold text-brand-700 dark:border-brand-500/30 dark:bg-brand-500/10 dark:text-brand-400">
           <Film className="h-3.5 w-3.5" />
@@ -87,41 +116,23 @@ export default function DemoReel() {
             <span className="h-2.5 w-2.5 rounded-full bg-amber-400" />
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
           </div>
-
-          {/* Mute / Unmute */}
-          <button
-            type="button"
-            onClick={handleMuteToggle}
-            className="flex cursor-pointer items-center gap-1.5 text-[11px] font-medium text-slate-400 transition-colors hover:text-white"
-          >
-            {isMuted ? (
-              <>
-                <VolumeX className="h-3.5 w-3.5" />
-                <span>Muted</span>
-              </>
-            ) : (
-              <>
-                <Volume2 className="h-3.5 w-3.5" />
-                <span>Unmuted</span>
-              </>
-            )}
-          </button>
         </div>
 
         <div className="relative aspect-video bg-gradient-to-br from-slate-900 to-slate-800">
-          {videoUrl ? (
+          {shouldLoadVideo ? (
             <video
               key={videoUrl}
-              ref={videoRef}
               src={videoUrl}
-              autoPlay
-              muted={isMuted}
+              autoPlay={!prefersReducedMotion}
+              controls={prefersReducedMotion}
+              muted
               loop
               playsInline
+              preload="metadata"
               className="h-full w-full object-cover"
             />
           ) : (
-            <DemoPlaceholder showCaptions={tab === "after"} />
+            <DemoPlaceholder showCaptions={tab === "after"} tab={tab} />
           )}
         </div>
       </motion.div>
@@ -138,7 +149,7 @@ export default function DemoReel() {
   );
 }
 
-function DemoPlaceholder({ showCaptions }) {
+function DemoPlaceholder({ showCaptions, tab }) {
   const bars = [35, 60, 45, 80, 50, 70, 40, 90, 55, 65, 35, 75, 45, 85, 40];
 
   return (
@@ -156,9 +167,9 @@ function DemoPlaceholder({ showCaptions }) {
         ))}
       </div>
 
-      <div className="flex items-center gap-2 rounded-full border border-dashed border-white/20 px-4 py-2 text-xs font-medium text-slate-300">
-        <UploadCloud className="h-3.5 w-3.5" />
-        Add your demo clip
+      <div className="flex items-center gap-2 rounded-full border border-white/15 bg-white/[0.04] px-4 py-2 text-xs font-medium text-slate-300">
+        <Film className="h-3.5 w-3.5" />
+        {tab === "after" ? "Subtitled result" : "Raw upload"}
       </div>
 
       {showCaptions && (

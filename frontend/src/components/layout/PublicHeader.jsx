@@ -17,8 +17,8 @@ export default function PublicHeader() {
   const { isAuthenticated } = useAuth()
 
   return (
-    <header className="glass sticky top-0 z-50 border-b border-black/5 dark:border-white/10">
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+    <header className="glass sticky top-0 z-50 border-b border-black/5 dark:border-white/[0.08]">
+      <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <Logo />
 
         <nav className="hidden items-center gap-8 md:flex">
@@ -26,7 +26,7 @@ export default function PublicHeader() {
             <a
               key={l.to}
               href={l.to}
-              className="text-[13px] font-normal text-slate-600 transition-colors hover:text-slate-900 dark:text-slate-300 dark:hover:text-white"
+              className="text-sm font-medium text-slate-500 transition-colors hover:text-brand-600 dark:text-slate-300 dark:hover:text-white"
             >
               {l.label}
             </a>
@@ -57,6 +57,9 @@ export default function PublicHeader() {
           <ThemeToggle />
           <button
             onClick={() => setOpen((o) => !o)}
+            aria-label={open ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={open}
+            aria-controls="mobile-navigation"
             className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-slate-600 dark:text-slate-300"
           >
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -65,7 +68,7 @@ export default function PublicHeader() {
       </div>
 
       {open && (
-        <div className="border-t border-slate-100 bg-white px-4 py-4 dark:border-slate-800 dark:bg-slate-950 md:hidden">
+        <div id="mobile-navigation" className="border-t border-slate-100 bg-white px-4 py-4 dark:border-slate-800 dark:bg-slate-950 md:hidden">
           <div className="flex flex-col gap-1">
             {LINKS.map((l) => (
               <a

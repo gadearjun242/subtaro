@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Mail, Send } from 'lucide-react'
+import { Mail, Send, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
 import Button from '@/components/ui/Button'
 import { Input, Label, Textarea, FieldError } from '@/components/ui/Input'
+import Card from '@/components/ui/Card'
 import { contactApi } from '@/api/contact.api'
 import { apiError } from '@/lib/axios'
 
@@ -36,20 +37,27 @@ export default function Contact() {
   }
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-16 sm:px-6 lg:px-8">
-      <div className="text-center">
-        <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-50 text-brand-600 dark:bg-brand-500/10 dark:text-brand-400">
-          <Mail className="h-6 w-6" />
-        </span>
-        <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-          Get in touch
+    <div className="relative mx-auto grid max-w-5xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-[0.85fr_1.15fr] lg:px-8">
+      <div>
+        <span className="premium-eyebrow"><Sparkles className="h-3.5 w-3.5" /> We’re here to help</span>
+        <h1 className="mt-6 text-4xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-5xl">
+          Let’s make your
+          <br />
+          <span className="text-gradient">next cut better.</span>
         </h1>
-        <p className="mt-2 text-slate-500 dark:text-slate-400">
-          Questions, feedback, or need a hand? Send us a message.
+        <p className="mt-5 max-w-md text-base leading-relaxed text-slate-500 dark:text-slate-400">
+          Questions, feedback, or need a hand? Send a note and the Subtaro team will get back to you.
         </p>
+        <div className="mt-8 flex items-center gap-3 text-sm text-slate-500 dark:text-slate-400">
+          <span className="flex h-11 w-11 items-center justify-center rounded-2xl border border-brand-500/15 bg-brand-500/10 text-brand-500">
+            <Mail className="h-5 w-5" />
+          </span>
+          A real person is ready to help.
+        </div>
       </div>
 
-      <form onSubmit={onSubmit} className="mt-10 space-y-5">
+      <Card className="p-6 sm:p-9">
+        <form onSubmit={onSubmit} className="space-y-5">
         <div>
           <Label htmlFor="name">Name</Label>
           <Input
@@ -88,7 +96,8 @@ export default function Contact() {
         <Button type="submit" className="w-full" loading={mutation.isPending}>
           <Send className="h-4 w-4" /> Send message
         </Button>
-      </form>
+        </form>
+      </Card>
     </div>
   )
 }

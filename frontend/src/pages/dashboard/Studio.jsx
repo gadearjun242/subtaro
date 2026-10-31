@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import './editor-fonts.css'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
@@ -706,10 +707,10 @@ export default function Studio() {
   const tickStep = pxPerSec >= 120 ? 1 : pxPerSec >= 60 ? 2 : pxPerSec >= 30 ? 5 : 10
   const canSave = dirty && !saveMutation.isPending
 
-  const panelBase = 'flex min-h-0 flex-col bg-white dark:bg-[#0b0b0c]'
+  const panelBase = 'flex min-h-0 flex-col bg-white dark:bg-[#0d1220]'
 
   return (
-    <div className="flex min-h-screen flex-col bg-slate-100 text-slate-900 dark:bg-black dark:text-slate-100 lg:h-screen lg:overflow-hidden">
+    <div className="flex min-h-screen flex-col bg-slate-100 text-slate-900 dark:bg-[#090d17] dark:text-slate-100 lg:h-screen lg:overflow-hidden">
       {/* ---------- top bar ---------- */}
       <header className="glass sticky top-0 z-30 flex min-h-12 shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-black/5 px-3 py-2 dark:border-white/10 lg:static">
         <div className="flex min-w-0 items-center gap-2">
@@ -754,7 +755,7 @@ export default function Studio() {
       </header>
 
       {/* ---------- workspace ---------- */}
-      <div className="contents lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[320px_minmax(0,1fr)_320px] lg:gap-px lg:bg-black/5 lg:dark:bg-white/10">
+      <div className="contents lg:grid lg:min-h-0 lg:flex-1 lg:grid-cols-[320px_minmax(0,1fr)_320px] lg:gap-px lg:bg-black/5 lg:dark:bg-white/[0.08]">
         {/* ----- captions list ----- */}
         <section className={clsx(panelBase, 'order-3 border-t border-black/5 dark:border-white/10 lg:order-none lg:border-0')}>
           <div className="flex h-10 shrink-0 items-center justify-between border-b border-black/5 px-3 dark:border-white/10">
@@ -814,7 +815,7 @@ export default function Studio() {
         </section>
 
         {/* ----- preview ----- */}
-        <section className={clsx(panelBase, 'order-1 bg-slate-100 dark:bg-black lg:order-none')}>
+        <section className={clsx(panelBase, 'order-1 bg-slate-100 dark:bg-[#090d17] lg:order-none')}>
           <div className="flex min-h-0 flex-1 items-center justify-center p-4">
             <div
               ref={frameRef}

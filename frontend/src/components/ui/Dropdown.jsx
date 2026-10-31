@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useLayoutEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, m as motion } from 'framer-motion'
 import clsx from 'clsx'
 
 const PANEL_GAP = 8 // px between trigger and panel

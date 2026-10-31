@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { User, Mail, Lock, ArrowRight } from 'lucide-react'
+import { User, Mail, Lock, ArrowRight, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Input, Label, FieldError } from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
@@ -39,8 +39,9 @@ export default function Register() {
 
   return (
     <div>
-      <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">Create your account</h1>
-      <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
+      <span className="premium-eyebrow"><Sparkles className="h-3.5 w-3.5" /> Start creating</span>
+      <h1 className="mt-5 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">Make every word land.</h1>
+      <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
         Start generating subtitles in less than a minute.
       </p>
 

@@ -1,75 +1,67 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom'
+import { domAnimation, LazyMotion } from 'framer-motion'
 import { Toaster } from 'react-hot-toast'
 import PublicLayout from '@/layouts/PublicLayout'
-import AuthLayout from '@/layouts/AuthLayout'
-import DashboardLayout from '@/layouts/DashboardLayout'
 import ProtectedRoute from '@/routes/ProtectedRoute'
 import PublicOnlyRoute from '@/routes/PublicOnlyRoute'
 import FullScreenLoader from '@/components/common/FullScreenLoader'
-import Login from '@/pages/auth/Login'
-import Register from '@/pages/auth/Register'
+import { resolveSeoMetadata } from '@/seoMetadata'
 
-const SITE_ORIGIN = 'https://subtaro.onrender.com'
-const ROUTE_METADATA = {
-  '/': {
-    title: 'Subtaro — AI Subtitles for Video & Audio',
-    description: 'Upload video or audio and get accurate, editable AI subtitles in minutes.',
-  },
-  '/pricing': {
-    title: 'Pricing — Subtaro',
-    description: 'Compare Subtaro plans for generating and editing accurate AI subtitles.',
-  },
-  '/privacy': {
-    title: 'Privacy Policy — Subtaro',
-    description: 'Learn how Subtaro handles and protects your information.',
-  },
-  '/terms': {
-    title: 'Terms of Service — Subtaro',
-    description: 'Read the terms for using Subtaro AI subtitle generation services.',
-  },
-  '/contact': {
-    title: 'Contact — Subtaro',
-    description: 'Get in touch with the Subtaro team for help with AI subtitles.',
-  },
-  '/login': {
-    title: 'Log In — Subtaro',
-    description: 'Log in to Subtaro to generate and edit AI subtitles for your videos and audio.',
-  },
-  '/register': {
-    title: 'Create Your Account — Subtaro',
-    description: 'Create a Subtaro account to start generating accurate AI subtitles.',
-  },
-}
+const AuthLayout = lazy(() => import('@/layouts/AuthLayout'))
+const DashboardLayout = lazy(() => import('@/layouts/DashboardLayout'))
+const Login = lazy(() => import('@/pages/auth/Login'))
+const Register = lazy(() => import('@/pages/auth/Register'))
 
 function RouteMetadata() {
   const { pathname } = useLocation()
 
   useEffect(() => {
-    const metadata = ROUTE_METADATA[pathname]
-    const canonicalUrl = `${SITE_ORIGIN}${pathname === '/' ? '/' : pathname}`
-    const title = metadata?.title || 'Subtaro — AI Subtitles for Video & Audio'
-    const description = metadata?.description || 'Upload video or audio and get accurate, editable AI subtitles in minutes.'
+    const metadata = resolveSeoMetadata(pathname)
+    const setMetaContent = (selector, content) => {
+      let element = document.querySelector(selector)
+      if (content === null) {
+        element?.remove()
+        return
+      }
+      if (!element) {
+        element = document.createElement('meta')
+        if (selector.startsWith('meta[name=')) {
+          element.name = selector.match(/meta\[name="([^"]+)"\]/)[1]
+        } else {
+          element.setAttribute('property', selector.match(/meta\[property="([^"]+)"\]/)[1])
+        }
+        document.head.append(element)
+      }
+      element.setAttribute('content', content)
+    }
 
-    document.title = title
-    document.querySelector('meta[name="description"]')?.setAttribute('content', description)
-    document.querySelector('meta[name="robots"]')?.setAttribute(
-      'content',
-      metadata ? 'index, follow' : 'noindex, nofollow',
-    )
-    document.querySelector('link[rel="canonical"]')?.setAttribute('href', canonicalUrl)
-    document.querySelector('meta[property="og:title"]')?.setAttribute('content', title)
-    document.querySelector('meta[property="og:description"]')?.setAttribute('content', description)
-    document.querySelector('meta[property="og:url"]')?.setAttribute('content', canonicalUrl)
-    document.querySelector('meta[name="twitter:title"]')?.setAttribute('content', title)
-    document.querySelector('meta[name="twitter:description"]')?.setAttribute('content', description)
+    document.title = metadata.title
+    setMetaContent('meta[name="description"]', metadata.description)
+    setMetaContent('meta[name="robots"]', metadata.robots)
+    setMetaContent('meta[property="og:title"]', metadata.title)
+    setMetaContent('meta[property="og:description"]', metadata.description)
+    setMetaContent('meta[property="og:url"]', metadata.canonical)
+    setMetaContent('meta[name="twitter:title"]', metadata.title)
+    setMetaContent('meta[name="twitter:description"]', metadata.description)
+
+    let canonical = document.querySelector('link[rel="canonical"]')
+    if (metadata.canonical) {
+      if (!canonical) {
+        canonical = document.createElement('link')
+        canonical.rel = 'canonical'
+        document.head.append(canonical)
+      }
+      canonical.href = metadata.canonical
+    } else {
+      canonical?.remove()
+    }
   }, [pathname])
 
   return null
 }
 
-// Login and registration load eagerly for immediate access; other route
-// pages stay code-split to keep the initial bundle smaller.
+// Auth and dashboard screens stay split from the public landing bundle.
 const Landing = lazy(() => import('@/pages/public/Landing'))
 const Pricing = lazy(() => import('@/pages/public/Pricing'))
 const Privacy = lazy(() => import('@/pages/public/Privacy'))
@@ -86,9 +78,10 @@ const Studio = lazy(() => import('@/pages/dashboard/Studio'))
 const Analytics = lazy(() => import('@/pages/dashboard/Analytics'))
 const Profile = lazy(() => import('@/pages/dashboard/Profile'))
 
-export default function App() {
+export function AppRoutes() {
   return (
-    <BrowserRouter>
+    <LazyMotion features={domAnimation}>
+      <>
       <RouteMetadata />
       <Toaster
         position="top-right"
@@ -143,6 +136,15 @@ export default function App() {
           <Route path="*" element={<NotFound />} />
         </Routes>
       </Suspense>
+      </>
+    </LazyMotion>
+  )
+}
+
+export default function App() {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
     </BrowserRouter>
   )
 }

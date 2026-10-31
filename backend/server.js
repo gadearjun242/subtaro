@@ -338,8 +338,43 @@ app.use("/api/payments", paymentRoutes);
 
 app.use("/api/contact", contactRoutes);
 
-app.use(/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, "public", "dist", "index.html"));
+const frontendDist = path.join(__dirname, "public", "dist");
+const clientAppRoutes = [
+  /^\/dashboard\/?$/,
+  /^\/dashboard\/projects\/?$/,
+  /^\/dashboard\/projects\/new\/?$/,
+  /^\/dashboard\/projects\/[^/]+\/?$/,
+  /^\/dashboard\/projects\/[^/]+\/studio\/?$/,
+  /^\/dashboard\/analytics\/?$/,
+  /^\/dashboard\/profile\/?$/,
+  /^\/verify-email\/[^/]+\/?$/,
+];
+
+app.get(/.*/, (req, res, next) => {
+  const pathname = req.path.replace(/\/+$/, "") || "/";
+  const isEmailVerificationRoute = /^\/verify-email\/[^/]+$/.test(pathname);
+  const isClientAppRoute = clientAppRoutes.some((pattern) =>
+    pattern.test(pathname),
+  );
+
+  if (isEmailVerificationRoute) {
+    return res.sendFile(
+      path.join(frontendDist, "verify-email", "index.html"),
+      (error) => {
+        if (error) next(error);
+      },
+    );
+  }
+
+  if (isClientAppRoute) {
+    return res.sendFile(path.join(frontendDist, "app.html"), (error) => {
+      if (error) next(error);
+    });
+  }
+
+  return res.status(404).sendFile(path.join(frontendDist, "404.html"), (error) => {
+    if (error) next(error);
+  });
 });
 
 // ============================================================

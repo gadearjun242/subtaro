@@ -25,10 +25,11 @@ export default function Header() {
   }
 
   return (
-    <header className="glass sticky top-0 z-30 flex min-h-14 shrink-0 items-center justify-between gap-2 border-b border-black/5 px-4 py-2 dark:border-white/10 sm:px-6">
+    <header className="glass sticky top-0 z-30 flex min-h-[4.25rem] shrink-0 items-center justify-between gap-2 border-b border-black/5 px-4 py-2 dark:border-white/[0.08] sm:px-7">
       <div className="flex min-w-0 items-center gap-3">
         <button
           onClick={toggleSidebar}
+          aria-label="Toggle navigation"
           className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/10"
         >
           <Menu className="h-5 w-5" />
@@ -37,7 +38,7 @@ export default function Header() {
           <h1 className="truncate text-base font-semibold tracking-tight text-slate-900 dark:text-white sm:text-lg">
             {title}
           </h1>
-          {subtitle && <p className="text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>}
+          {subtitle && <p className="mt-0.5 truncate text-xs text-slate-500 dark:text-slate-400">{subtitle}</p>}
         </div>
       </div>
 

@@ -205,7 +205,7 @@ The exclusion of `backend/public/**` means this README intentionally does **not*
 | Final video generation | `render.worker.js` + `media.service.js` | BullMQ job + Project.output |
 | Live progress | `socket.service.js`, Socket.IO server | Ephemeral socket connection |
 | Search | `Project.subtitle.searchText` | MongoDB, hidden from normal projections |
-| Subscription catalog | `plan.service.js` + `Plan.js` | Seed catalog → MongoDB |
+| Subscription catalog | `backend/data/planCatalog.json`, `plan.service.js` + `Plan.js` | Shared frontend/backend catalog → MongoDB |
 | Subscription enforcement | **Not fully implemented** | Route auth only; no plan gate |
 
 ## 4. Core end-to-end flows
@@ -644,7 +644,7 @@ Multer disk-storage policy and MIME/size allowlist for uploads. Supports video/a
 MongoDB schema for inbound contact submissions. Stores sender identity/message metadata and request IP information for support workflows.
 
 #### `backend/models/Plan.js` — 106 lines
-MongoDB schema for subscription plans seeded from the static catalog in plan.service.js. Holds key, display information, price, duration and feature metadata.
+MongoDB schema for subscription plans seeded from `backend/data/planCatalog.json`. The frontend uses the same catalog to prerender pricing; the API remains authoritative for live plan state and payments.
 
 #### `backend/models/Project.js` — 1014 lines
 Central domain schema. Models ownership, stable projectId, status, media input, subtitle mode/style, external subtitle-service state, five pipeline steps, generated subtitle metadata/file, final output video metadata/file, notifications, processing metrics, logs, failure details and source metadata. Several helper methods and validators protect step integrity and make status checks explicit.
@@ -673,7 +673,7 @@ Media-processing core. Downloads remote media with bounded size/timeouts, probes
 Project outcome notification policy. Tracks the notification state, suppresses email when the user is currently connected via Socket.IO, otherwise sends completion/failure email and records sent/failed/not_required state.
 
 #### `backend/services/plan.service.js` — 173 lines
-Subscription catalog/service layer. Seeds the five plan variants (a 10-day free trial plus monthly, 3-month, 6-month and 12-month plans, priced in INR), deactivates retired plans such as the former lifetime plan, exposes active plans, resolves plans by key and calculates subscription windows.
+Subscription catalog/service layer. Seeds the five plan variants from `backend/data/planCatalog.json` (also used to prerender the pricing page), deactivates retired plans such as the former lifetime plan, exposes active plans, resolves plans by key and calculates subscription windows.
 
 #### `backend/services/project.service.js` — 1191 lines
 Application integration/orchestration for the external subtitle service. Defines the five processing stages, generates signed webhook URLs, submits projects, syncs remote status/logs back into MongoDB, resumes failed jobs, and emits project events on meaningful state changes.
@@ -1025,7 +1025,7 @@ cd frontend
 npm run dist
 ```
 
-This generates Vite output and moves it into `backend/public/dist` for Express static serving. Because that destination is generated/static output, it should not be treated as the source-of-truth frontend code.
+This builds the Vite app, prerenders the public pages and 404 body into their route-specific HTML, then moves the output into `backend/public/dist` for Express static serving. The React app hydrates those public pages in the browser; private routes remain client-rendered and noindex. Because the destination is generated/static output, it should not be treated as the source-of-truth frontend code.
 
 ### Docker Compose
 

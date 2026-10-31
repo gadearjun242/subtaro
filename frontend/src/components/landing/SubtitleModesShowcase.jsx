@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { m as motion, AnimatePresence } from 'framer-motion'
 import { Flame, ListVideo, Check, Captions } from 'lucide-react'
 
 const MODES = {

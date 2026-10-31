@@ -4,7 +4,7 @@ export default function Card({ className, children, ...props }) {
   return (
     <div
       className={clsx(
-        'rounded-3xl border border-black/5 bg-white shadow-[0_1px_2px_rgb(0_0_0/0.04),0_8px_24px_-12px_rgb(0_0_0/0.08)] dark:border-white/10 dark:bg-white/[0.04] dark:shadow-none',
+        'rounded-[1.5rem] border border-[color:var(--surface-border)] bg-[var(--surface-card)] shadow-[0_12px_40px_-24px_rgb(35_42_57/0.16)] dark:shadow-[0_24px_70px_-44px_rgb(0_0_0/0.9)]',
         className
       )}
       {...props}

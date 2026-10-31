@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { FolderKanban, CheckCircle2, Clock3, HardDrive, PlusCircle, ArrowRight } from 'lucide-react'
+import { FolderKanban, CheckCircle2, Clock3, HardDrive, PlusCircle, ArrowRight, Sparkles } from 'lucide-react'
 import { userApi } from '@/api/user.api'
 import StatCard from '@/components/dashboard/StatCard'
 import ProjectCard from '@/components/dashboard/ProjectCard'
@@ -33,21 +33,25 @@ export default function Overview() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
-        <div>
-          <h2 className="text-3xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-            Welcome back, {user?.name?.split(' ')[0]}.
-          </h2>
-          <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400 sm:text-base">
-            Here's what's happening with your subtitle projects.
-          </p>
+      <Card className="relative overflow-hidden border-brand-500/10 bg-gradient-to-br from-brand-50 via-white to-accent-500/[0.06] p-6 dark:border-white/[0.08] dark:from-[#111a2b] dark:via-[#111725] dark:to-[#20142e] sm:p-8">
+        <div className="pointer-events-none absolute -right-10 -top-20 h-64 w-64 rounded-full bg-brand-500/10 blur-[80px]" />
+        <div className="relative flex flex-col justify-between gap-5 sm:flex-row sm:items-center">
+          <div>
+            <span className="premium-eyebrow"><Sparkles className="h-3.5 w-3.5" /> Your workspace</span>
+            <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+              Welcome back, {user?.name?.split(' ')[0]}.
+            </h2>
+            <p className="mt-2 text-sm text-slate-500 dark:text-slate-300 sm:text-base">
+              Your next polished subtitle project starts here.
+            </p>
+          </div>
+          <Link to="/dashboard/projects/new" className="sm:shrink-0">
+            <Button className="w-full sm:w-auto">
+              <PlusCircle className="h-4 w-4" /> New project
+            </Button>
+          </Link>
         </div>
-        <Link to="/dashboard/projects/new" className="sm:shrink-0">
-          <Button className="w-full sm:w-auto">
-            <PlusCircle className="h-4 w-4" /> New project
-          </Button>
-        </Link>
-      </div>
+      </Card>
 
       <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 sm:gap-4 xl:grid-cols-4">
         <StatCard
@@ -82,7 +86,7 @@ export default function Overview() {
         />
       </div>
 
-      <Card className="p-3 sm:p-6">
+      <Card className="p-4 sm:p-6">
         <div className="flex flex-wrap items-center px-1 sm:px-0 justify-between gap-2">
           <h3 className="text-lg font-semibold tracking-tight text-slate-900 dark:text-white">Recent projects</h3>
           <Link

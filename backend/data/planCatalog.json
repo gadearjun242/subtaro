@@ -1,0 +1,90 @@
+[
+  {
+    "key": "free_trial",
+    "name": "Free Trial",
+    "description": "Try everything, no card required.",
+    "durationDays": 10,
+    "isLifetime": false,
+    "price": 0,
+    "currency": "INR",
+    "badge": null,
+    "isDefault": true,
+    "sortOrder": 0,
+    "features": [
+      "10 days full access",
+      "Unlimited video & audio uploads",
+      "Speaker-aware transcription",
+      "Editable subtitles",
+      "Live processing updates"
+    ]
+  },
+  {
+    "key": "monthly",
+    "name": "Monthly",
+    "description": "Flexible, cancel any time.",
+    "durationDays": 30,
+    "isLifetime": false,
+    "price": 299,
+    "currency": "INR",
+    "badge": null,
+    "isDefault": false,
+    "sortOrder": 1,
+    "features": [
+      "Everything in Free Trial",
+      "Priority processing queue",
+      "Extended storage",
+      "Email support"
+    ]
+  },
+  {
+    "key": "quarterly",
+    "name": "3 Months",
+    "description": "A quarter of savings.",
+    "durationDays": 90,
+    "isLifetime": false,
+    "price": 799,
+    "currency": "INR",
+    "badge": "Save 11%",
+    "isDefault": false,
+    "sortOrder": 2,
+    "features": [
+      "Everything in Monthly",
+      "Batch project uploads",
+      "Priority support"
+    ]
+  },
+  {
+    "key": "half_yearly",
+    "name": "6 Months",
+    "description": "Half a year, better value.",
+    "durationDays": 180,
+    "isLifetime": false,
+    "price": 1499,
+    "currency": "INR",
+    "badge": "Save 16%",
+    "isDefault": false,
+    "sortOrder": 3,
+    "features": [
+      "Everything in 3 Months",
+      "Advanced analytics",
+      "Early access to new features"
+    ]
+  },
+  {
+    "key": "yearly",
+    "name": "12 Months",
+    "description": "Our best recurring value.",
+    "durationDays": 365,
+    "isLifetime": false,
+    "price": 2699,
+    "currency": "INR",
+    "badge": "Most popular",
+    "isDefault": false,
+    "sortOrder": 4,
+    "features": [
+      "Everything in 6 Months",
+      "Dedicated support channel",
+      "2 months free vs. monthly"
+    ]
+  }
+]

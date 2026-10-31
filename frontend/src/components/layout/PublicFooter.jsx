@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Code2, MessageCircle, Briefcase, ExternalLink } from 'lucide-react'
+import { ExternalLink } from 'lucide-react'
 import Logo from '@/components/common/Logo'
 import { APP_NAME, PORTFOLIO_URL } from '@/lib/config'
 
@@ -32,7 +32,7 @@ const COLUMNS = [
 
 export default function PublicFooter() {
   return (
-    <footer className="border-t border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+    <footer className="border-t border-black/[0.06] bg-[#eeede7]/80 backdrop-blur-xl dark:border-white/[0.07] dark:bg-[#080b13]/80">
       <div className="mx-auto max-w-7xl px-4 py-14 sm:px-6 lg:px-8">
         <div className="grid grid-cols-2 gap-10 md:grid-cols-4">
           <div className="col-span-2 md:col-span-1">
@@ -40,15 +40,11 @@ export default function PublicFooter() {
             <p className="mt-3 max-w-xs text-sm text-slate-500 dark:text-slate-400">
               Upload video or audio, get clean, editable subtitles powered by speaker-aware AI transcription.
             </p>
-            <div className="mt-4 flex items-center gap-3">
-              {[MessageCircle, Code2, Briefcase].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-brand-100 hover:text-brand-600 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-brand-500/10"
-                >
-                  <Icon className="h-4 w-4" />
-                </a>
+            <div className="mt-4 flex flex-wrap gap-2" aria-label="Subtaro product capabilities">
+              {['Video', 'Audio', 'Editable captions'].map((feature) => (
+                <span key={feature} className="rounded-full border border-black/[0.06] bg-[#f3f2ed] px-3 py-1 text-[11px] font-medium text-slate-600 dark:border-white/[0.08] dark:bg-white/[0.04] dark:text-slate-300">
+                  {feature}
+                </span>
               ))}
             </div>
           </div>

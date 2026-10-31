@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { motion } from 'framer-motion'
+import { m as motion } from 'framer-motion'
 import { CheckCircle2, XCircle, Loader2, ArrowRight } from 'lucide-react'
 import { authApi } from '@/api/auth.api'
 import { apiError } from '@/lib/axios'
@@ -45,7 +45,7 @@ export default function VerifyEmail() {
         initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.35 }}
-        className="w-full max-w-sm rounded-3xl border border-slate-200 bg-white p-8 text-center shadow-xl shadow-slate-200/50 dark:border-slate-800 dark:bg-slate-900 dark:shadow-none"
+        className="premium-surface w-full max-w-sm rounded-[2rem] bg-white p-8 text-center shadow-xl shadow-slate-200/50 dark:bg-[#111725]/90 dark:shadow-none"
       >
         {state === 'loading' && (
           <>

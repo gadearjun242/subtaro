@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Mail, Lock, ArrowRight } from 'lucide-react'
+import { Mail, Lock, ArrowRight, Sparkles } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Input, Label, FieldError } from '@/components/ui/Input'
 import Button from '@/components/ui/Button'
@@ -38,8 +38,9 @@ export default function Login() {
 
   return (
     <div>
-      <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white">Welcome back</h1>
-      <p className="mt-1.5 text-sm text-slate-500 dark:text-slate-400">
+      <span className="premium-eyebrow"><Sparkles className="h-3.5 w-3.5" /> Welcome back</span>
+      <h1 className="mt-5 text-3xl font-semibold tracking-tight text-slate-900 dark:text-white">Pick up where you left off.</h1>
+      <p className="mt-2 text-sm leading-relaxed text-slate-500 dark:text-slate-400">
         Log in to keep working on your subtitle projects.
       </p>
 

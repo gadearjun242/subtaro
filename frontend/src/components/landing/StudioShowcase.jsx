@@ -1,4 +1,4 @@
-import { motion } from 'framer-motion'
+import { m as motion } from 'framer-motion'
 import { Scissors, MousePointer2, Undo2, Keyboard } from 'lucide-react'
 
 const BLOCKS = [
