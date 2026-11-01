@@ -443,13 +443,13 @@ The selectable path keeps subtitles toggleable by muxing SRT into MP4 as `mov_te
 
 ### Frontend
 
-`VITE_API_URL`, `VITE_SOCKET_URL`, `VITE_APP_NAME`, `VITE_APP_TAGLINE`, `VITE_MAX_UPLOAD_SIZE_MB`, and `VITE_PORTFOLIO_URL` drive browser configuration. The client-side upload limit is deliberately kept in sync with the backend upload limit, but the backend remains authoritative.
+`VITE_API_URL`, `VITE_SOCKET_URL`, `VITE_APP_NAME`, `VITE_APP_TAGLINE`, `VITE_MAX_UPLOAD_SIZE_MB`, and `VITE_PORTFOLIO_URL` drive browser configuration. The client-side upload limit is deliberately kept in sync with the backend upload limit, but the backend remains authoritative. Public pages are prerendered with route-specific SEO metadata; after changing frontend source, run `cd frontend && npm run dist` to regenerate the static assets served from `backend/public/dist`. The social preview uses `frontend/public/og-image.jpg`.
 
 ### Configuration inconsistencies to resolve
 
 1. The example environment advertises a **7-day refresh expiry**, while `auth.controller.js` falls back to **30 days** and the cookie `maxAge` is hard-coded to **30 days**. Choose one source of truth.
 2. `.env.example` shows `MAX_SOURCE_DOWNLOAD_BYTES=10 MB`, while some controller constants fall back to a much larger default when the environment variable is absent. Make the actual safety limit explicit and centralized.
-3. The frontend `dist` script writes into `backend/public/dist`, but that directory is outside the requested analysis scope and should remain a generated artifact, not hand-edited source.
+3. `backend/public/dist` is a generated, tracked deployment artifact because Express serves it directly. Regenerate it with the frontend `dist` script; do not hand-edit its compiled assets.
 
 ## 12. Local development
 

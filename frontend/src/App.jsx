@@ -42,6 +42,7 @@ function RouteMetadata() {
     setMetaContent('meta[property="og:title"]', metadata.title)
     setMetaContent('meta[property="og:description"]', metadata.description)
     setMetaContent('meta[property="og:url"]', metadata.canonical)
+    setMetaContent('meta[name="twitter:image"]', `${window.location.origin}/og-image.jpg`)
     setMetaContent('meta[name="twitter:title"]', metadata.title)
     setMetaContent('meta[name="twitter:description"]', metadata.description)
 

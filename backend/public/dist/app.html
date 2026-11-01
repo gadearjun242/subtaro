@@ -5,13 +5,8 @@
   <meta charset="UTF-8" />
 
   <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
   <link rel="manifest" href="/manifest.webmanifest" />
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-  />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Subtaro Dashboard</title>
   <meta name="description"
@@ -42,22 +37,24 @@
   <meta name="twitter:image" content="https://subtaro.onrender.com/og-image.jpg" />
   <meta name="twitter:image:alt" content="Subtaro — AI Subtitle Generator" />
   <meta name="mobile-web-app-capable" content="yes" />
-  <script src="/theme-init.js"></script>
-  <script type="application/ld+json">
-    {
-      "@context": "https://schema.org",
-      "@type": "WebSite",
-      "name": "Subtaro",
-      "url": "https://subtaro.onrender.com/",
-      "description": "Generate, edit, and style AI subtitles for video and audio. Create speaker-aware captions and export finished videos with Subtaro."
+  <script>
+    try {
+      const savedTheme = localStorage.getItem('theme')
+      const isLight = savedTheme === 'light'
+      document.documentElement.classList.toggle('dark', !isLight)
+      document.documentElement.style.colorScheme = isLight ? 'light' : 'dark'
+    } catch {
+      document.documentElement.classList.add('dark')
+      document.documentElement.style.colorScheme = 'dark'
     }
   </script>
-  <script type="module" crossorigin src="/assets/index-B1sGJIdQ.js"></script>
+  <script type="module" crossorigin src="/assets/index-De_7qyDV.js"></script>
   <link rel="modulepreload" crossorigin href="/assets/jsx-runtime-Cx0BB4qO.js">
   <link rel="modulepreload" crossorigin href="/assets/clsx-RXocPj9y.js">
   <link rel="modulepreload" crossorigin href="/assets/config-BJHPBVgW.js">
   <link rel="modulepreload" crossorigin href="/assets/axios-B6YfZ1U3.js">
   <link rel="stylesheet" crossorigin href="/assets/index-iz6WlAI7.css">
+
 </head>
 
 <body>

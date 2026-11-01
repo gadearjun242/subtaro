@@ -74,7 +74,9 @@ export function resolveSeoMetadata(pathname) {
 
   return {
     ...metadata,
-    robots: metadata.indexable ? 'index, follow' : 'noindex, nofollow',
+    robots: metadata.indexable
+      ? 'index, follow, max-image-preview:large'
+      : 'noindex, nofollow',
     canonical: metadata.indexable ? `${SITE_ORIGIN}${path === '/' ? '/' : path}` : null,
   }
 }
@@ -100,6 +102,29 @@ function updateMeta(html, key, name, value) {
 export function renderSeoHtml(html, pathname) {
   const metadata = resolveSeoMetadata(pathname)
   const socialImage = `${SITE_ORIGIN}/og-image.jpg`
+  const structuredData = metadata.indexable
+    ? {
+        '@context': 'https://schema.org',
+        '@graph': [
+          {
+            '@type': 'Organization',
+            '@id': `${SITE_ORIGIN}/#organization`,
+            name: 'Subtaro',
+            url: `${SITE_ORIGIN}/`,
+            logo: `${SITE_ORIGIN}/favicon.svg`,
+          },
+          {
+            '@type': 'WebSite',
+            '@id': `${SITE_ORIGIN}/#website`,
+            name: 'Subtaro',
+            url: `${SITE_ORIGIN}/`,
+            description: ROUTE_METADATA['/'].description,
+            publisher: { '@id': `${SITE_ORIGIN}/#organization` },
+            inLanguage: 'en',
+          },
+        ],
+      }
+    : null
   const title = `<title>${escapeHtml(metadata.title)}</title>`
   const titlePattern = /<title>[\s\S]*?<\/title>/i
 
@@ -116,6 +141,16 @@ export function renderSeoHtml(html, pathname) {
   html = updateMeta(html, 'name', 'twitter:title', metadata.title)
   html = updateMeta(html, 'name', 'twitter:description', metadata.description)
   html = updateMeta(html, 'name', 'twitter:image', socialImage)
+  const structuredDataPattern = /<script type="application\/ld\+json">[\s\S]*?<\/script>/i
+  const structuredDataScript = structuredData
+    ? `<script type="application/ld+json">${JSON.stringify(structuredData)}</script>`
+    : ''
+
+  if (structuredDataPattern.test(html)) {
+    html = html.replace(structuredDataPattern, structuredDataScript)
+  } else if (structuredDataScript) {
+    html = html.replace('</head>', `${structuredDataScript}\n</head>`)
+  }
 
   const canonicalPattern = /<link\s+rel="canonical"[^>]*>/i
   if (metadata.canonical) {

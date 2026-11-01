@@ -72,8 +72,9 @@ export default function Hero() {
           <p
             className="mx-auto mt-6 max-w-2xl text-lg text-slate-500 dark:text-slate-400 sm:text-2xl"
           >
-            Upload a video or audio file. Get speaker-aware subtitles, separated vocals
-            and instrumental, and a finished video you can style your way.
+            Subtaro is an AI subtitle generator for video and audio. Create
+            speaker-aware captions, edit and style every line, then export a
+            finished video.
           </p>
 
           <div
