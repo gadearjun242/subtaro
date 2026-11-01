@@ -35,3 +35,4 @@ frontend/dist/
 .env.*
 !.env.example
 !backend/public/dist
+subtitle/
