@@ -99,6 +99,7 @@ function updateMeta(html, key, name, value) {
 
 export function renderSeoHtml(html, pathname) {
   const metadata = resolveSeoMetadata(pathname)
+  const socialImage = `${SITE_ORIGIN}/og-image.jpg`
   const title = `<title>${escapeHtml(metadata.title)}</title>`
   const titlePattern = /<title>[\s\S]*?<\/title>/i
 
@@ -108,8 +109,13 @@ export function renderSeoHtml(html, pathname) {
   html = updateMeta(html, 'property', 'og:title', metadata.title)
   html = updateMeta(html, 'property', 'og:description', metadata.description)
   html = updateMeta(html, 'property', 'og:url', metadata.canonical)
+  html = updateMeta(html, 'property', 'og:image', socialImage)
+  html = updateMeta(html, 'property', 'og:image:type', 'image/jpeg')
+  html = updateMeta(html, 'property', 'og:image:width', '1200')
+  html = updateMeta(html, 'property', 'og:image:height', '630')
   html = updateMeta(html, 'name', 'twitter:title', metadata.title)
   html = updateMeta(html, 'name', 'twitter:description', metadata.description)
+  html = updateMeta(html, 'name', 'twitter:image', socialImage)
 
   const canonicalPattern = /<link\s+rel="canonical"[^>]*>/i
   if (metadata.canonical) {

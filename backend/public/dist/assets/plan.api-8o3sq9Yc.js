@@ -1,0 +1,1 @@
+import{t as e}from"./axios-B6YfZ1U3.js";var t={list:()=>e.get(`/plans`).then(e=>e.data)},n={getMine:()=>e.get(`/users/me/subscription`).then(e=>e.data)},r={config:()=>e.get(`/payments/config`).then(e=>e.data),createOrder:t=>e.post(`/payments/order`,{planKey:t}).then(e=>e.data),verify:t=>e.post(`/payments/verify`,t).then(e=>e.data)};export{t as n,n as r,r as t};
